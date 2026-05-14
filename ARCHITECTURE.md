@@ -24,16 +24,16 @@ The operational delivery path stays outside this crate.
   prototype witness, **component observations** (record-carrying batches
   wrapping component-owned typed observations), and **list record
   kinds** (catalog-style schema introspection — capability flags +
-  record-kind names + contract-crate identifiers per `/41 D7`, not
-  field-level schemas).
+  record-kind names + contract-crate identifiers — not field-level
+  schemas).
 - Reply records that wrap or summarize observations for projection.
 - `ComponentObservationResult` closed enum that wraps the *owning
   component's* batch types (`signal_persona_terminal::TerminalObservationBatch`,
   `signal_persona_router::RouterObservationBatch`, etc.) — wrapping,
   not redefining.
 - Signal root-verb mapping for every request variant. All current variants
-  map to `Match`. Future `SubscribeComponent` (Slice 3 per designer `/160`)
-  maps to `Subscribe`.
+  map to `Match`. Future `SubscribeComponent` (Slice 3) maps to
+  `Subscribe`.
 
 ## 2. Non-ownership
 
@@ -77,5 +77,4 @@ observation types (added in `signal-persona-terminal` and
 `SubscribeComponent` lands in Slice 3 (gated on `sema-engine`
 Package 4 + per-peer commit-then-emit). Its envelope variant is
 out of scope until then; adding an `Unimplemented`-stub variant
-gives every consumer contract debt with no working feature, per
-DA `/41 D6`.
+would give every consumer contract debt with no working feature.
