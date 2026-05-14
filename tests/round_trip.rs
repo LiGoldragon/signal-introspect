@@ -4,25 +4,31 @@ use signal_persona_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
     DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot, EngineSnapshotQuery, Frame,
     IntrospectionReply, IntrospectionRequest, IntrospectionTarget, PrototypeWitness,
+    PrototypeWitnessQuery,
 };
 
-#[test]
-fn engine_snapshot_query_round_trips_through_length_prefixed_frame() {
-    let request = IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery {
-        engine: EngineId::new("prototype"),
-    });
-    let frame = Frame::new(FrameBody::Request(Request::assert(request.clone())));
+fn round_trip_request(request: IntrospectionRequest) {
+    let frame = Frame::new(FrameBody::Request(Request::match_records(request.clone())));
 
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = Frame::decode_length_prefixed(&bytes).expect("decode");
 
     match decoded.into_body() {
         FrameBody::Request(Request::Operation { verb, payload }) => {
-            assert_eq!(verb, SemaVerb::Assert);
+            assert_eq!(verb, request.signal_verb());
+            assert_eq!(verb, SemaVerb::Match);
             assert_eq!(payload, request);
         }
-        other => panic!("expected Assert request, got {other:?}"),
+        other => panic!("expected Match request, got {other:?}"),
     }
+}
+
+#[test]
+fn engine_snapshot_query_round_trips_through_length_prefixed_frame() {
+    let request = IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery {
+        engine: EngineId::new("prototype"),
+    });
+    round_trip_request(request);
 }
 
 #[test]
@@ -31,17 +37,7 @@ fn component_snapshot_query_round_trips_through_length_prefixed_frame() {
         engine: EngineId::new("prototype"),
         target: IntrospectionTarget::Router,
     });
-    let frame = Frame::new(FrameBody::Request(Request::assert(request.clone())));
-
-    let bytes = frame.encode_length_prefixed().expect("encode");
-    let decoded = Frame::decode_length_prefixed(&bytes).expect("decode");
-
-    match decoded.into_body() {
-        FrameBody::Request(Request::Operation { payload, .. }) => {
-            assert_eq!(payload, request);
-        }
-        other => panic!("expected request, got {other:?}"),
-    }
+    round_trip_request(request);
 }
 
 #[test]
@@ -50,16 +46,38 @@ fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
         engine: EngineId::new("prototype"),
         correlation: "fixture-delivery".into(),
     });
-    let frame = Frame::new(FrameBody::Request(Request::assert(request.clone())));
+    round_trip_request(request);
+}
 
-    let bytes = frame.encode_length_prefixed().expect("encode");
-    let decoded = Frame::decode_length_prefixed(&bytes).expect("decode");
+#[test]
+fn prototype_witness_query_round_trips_as_match_request() {
+    let request = IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
+        engine: EngineId::new("prototype"),
+    });
+    round_trip_request(request);
+}
 
-    match decoded.into_body() {
-        FrameBody::Request(Request::Operation { payload, .. }) => {
-            assert_eq!(payload, request);
-        }
-        other => panic!("expected request, got {other:?}"),
+#[test]
+fn introspection_request_variants_are_read_shaped_match_operations() {
+    let requests = [
+        IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery {
+            engine: EngineId::new("prototype"),
+        }),
+        IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
+            engine: EngineId::new("prototype"),
+            target: IntrospectionTarget::Router,
+        }),
+        IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
+            engine: EngineId::new("prototype"),
+            correlation: "fixture-delivery".into(),
+        }),
+        IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
+            engine: EngineId::new("prototype"),
+        }),
+    ];
+
+    for request in requests {
+        assert_eq!(request.signal_verb(), SemaVerb::Match);
     }
 }
 

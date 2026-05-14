@@ -8,7 +8,7 @@
 
 use nota_codec::{NotaEnum, NotaRecord, NotaTransparent};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use signal_core::signal_channel;
+use signal_core::{SemaVerb, signal_channel};
 use signal_persona_auth::EngineId;
 
 #[derive(
@@ -172,5 +172,16 @@ signal_channel! {
         PrototypeWitness(PrototypeWitness),
         Unimplemented(IntrospectionUnimplemented),
         Denied(IntrospectionDenied),
+    }
+}
+
+impl IntrospectionRequest {
+    pub const fn signal_verb(&self) -> SemaVerb {
+        match self {
+            Self::EngineSnapshot(_)
+            | Self::ComponentSnapshot(_)
+            | Self::DeliveryTrace(_)
+            | Self::PrototypeWitness(_) => SemaVerb::Match,
+        }
     }
 }
