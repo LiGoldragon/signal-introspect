@@ -60,8 +60,8 @@ surface".
 |---|---|
 | The central contract asks and wraps; it does not define component rows. | Review of public types and tests: no router/terminal/manager row vocabulary defined here. Source-scan witness: `central_contract_does_not_define_terminal_rows`. |
 | Every request/reply travels as a Signal frame. | `tests/round_trip.rs` length-prefixed frame tests. |
-| **Every `IntrospectionRequest` variant declares a Signal root verb.** | `impl IntrospectionRequest { pub fn signal_verb(&self) -> <signal-core root verb> }` plus round-trip tests asserting verb+payload alignment per `~/primary/skills/contract-repo.md` §"Signal is the database language — every request declares a verb". |
-| Read-shaped payloads use `Match` or `Subscribe`; write-shaped payloads use `Assert`/`Mutate`/`Retract`/`Atomic`. Read-algebra (`Project`/`Aggregate`/`Constrain`/`Infer`/`Recurse`) appears inside `Match`/`Subscribe`/`Validate` payloads via `sema-engine`'s `ReadPlan`, never as a root verb. | The per-variant `signal_verb()` mapping enforces this; introspect is read-only inspection plane so all current variants are `Match`. |
+| **Every `IntrospectionRequest` variant declares a Signal root verb.** | The `signal_channel!` declaration names each root verb; `signal-core` generates `IntrospectionRequest::signal_verb()` and `IntrospectionRequest::into_signal_request()`. Round-trip tests assert verb+payload alignment. |
+| Read-shaped payloads use `Match` or `Subscribe`; write-shaped payloads use `Assert`/`Mutate`/`Retract`/`Atomic`. Read-algebra (`Project`/`Aggregate`/`Constrain`/`Infer`/`Recurse`) appears inside `Match`/`Subscribe`/`Validate` payloads via `sema-engine`'s `ReadPlan`, never as a root verb. | The `signal_channel!` root declarations enforce this; introspect is read-only inspection plane so all current variants are `Match`. |
 | NOTA derives live on the same typed records. | Cargo tests compile `NotaRecord`, `NotaEnum`, and `NotaTransparent` derives. |
 | The contract contains no daemon code. | Source scan: no Kameo, no Tokio, no socket code. |
 

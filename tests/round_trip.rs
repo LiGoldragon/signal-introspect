@@ -1,4 +1,4 @@
-use signal_core::{FrameBody, Request, SemaVerb};
+use signal_core::{FrameBody, Request, SignalVerb};
 use signal_persona_auth::EngineId;
 use signal_persona_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
@@ -8,15 +8,16 @@ use signal_persona_introspect::{
 };
 
 fn round_trip_request(request: IntrospectionRequest) {
-    let frame = Frame::new(FrameBody::Request(Request::match_records(request.clone())));
+    let expected_verb = request.signal_verb();
+    let frame = Frame::new(FrameBody::Request(request.clone().into_signal_request()));
 
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = Frame::decode_length_prefixed(&bytes).expect("decode");
 
     match decoded.into_body() {
         FrameBody::Request(Request::Operation { verb, payload }) => {
-            assert_eq!(verb, request.signal_verb());
-            assert_eq!(verb, SemaVerb::Match);
+            assert_eq!(verb, expected_verb);
+            assert_eq!(verb, SignalVerb::Match);
             assert_eq!(payload, request);
         }
         other => panic!("expected Match request, got {other:?}"),
@@ -77,7 +78,7 @@ fn introspection_request_variants_are_read_shaped_match_operations() {
     ];
 
     for request in requests {
-        assert_eq!(request.signal_verb(), SemaVerb::Match);
+        assert_eq!(request.signal_verb(), SignalVerb::Match);
     }
 }
 
