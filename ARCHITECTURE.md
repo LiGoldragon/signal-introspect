@@ -8,8 +8,6 @@
 `persona-introspect` for an engine observation. It is a wrapper and selector
 contract, not a home for component-owned rows.
 
-The component shape comes from
-`~/primary/reports/operator/114-persona-introspect-prototype-impact-survey.md`:
 `persona-introspect` is prototype-included as the inspection-plane witness.
 The operational delivery path stays outside this crate.
 
@@ -69,10 +67,8 @@ surface".
 
 ## 4. Status
 
-Operator-assistant is implementing per
-`~/primary/reports/designer/160-persona-introspect-brief-for-operator-assistant.md`'s
-Slice 1: verb-mapping witness + envelope extension
-(`ComponentObservations`, `ListRecordKinds`,
+Operator-assistant is implementing Slice 1: verb-mapping witness +
+envelope extension (`ComponentObservations`, `ListRecordKinds`,
 `AwaitingCorrelationCache`). The `ComponentObservationResult`
 wrapping types compile against component-owned terminal + router
 observation types (added in `signal-persona-terminal` and
