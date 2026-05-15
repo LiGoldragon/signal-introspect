@@ -158,19 +158,21 @@ pub enum IntrospectionDeniedReason {
 }
 
 signal_channel! {
-    request IntrospectionRequest {
-        Match EngineSnapshot(EngineSnapshotQuery),
-        Match ComponentSnapshot(ComponentSnapshotQuery),
-        Match DeliveryTrace(DeliveryTraceQuery),
-        Match PrototypeWitness(PrototypeWitnessQuery),
-    }
+    channel Introspection {
+        request IntrospectionRequest {
+            Match EngineSnapshot(EngineSnapshotQuery),
+            Match ComponentSnapshot(ComponentSnapshotQuery),
+            Match DeliveryTrace(DeliveryTraceQuery),
+            Match PrototypeWitness(PrototypeWitnessQuery),
+        }
 
-    reply IntrospectionReply {
-        EngineSnapshot(EngineSnapshot),
-        ComponentSnapshot(ComponentSnapshot),
-        DeliveryTrace(DeliveryTrace),
-        PrototypeWitness(PrototypeWitness),
-        Unimplemented(IntrospectionUnimplemented),
-        Denied(IntrospectionDenied),
+        reply IntrospectionReply {
+            EngineSnapshot(EngineSnapshot),
+            ComponentSnapshot(ComponentSnapshot),
+            DeliveryTrace(DeliveryTrace),
+            PrototypeWitness(PrototypeWitness),
+            Unimplemented(IntrospectionUnimplemented),
+            Denied(IntrospectionDenied),
+        }
     }
 }
