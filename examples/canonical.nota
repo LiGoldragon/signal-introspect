@@ -1,0 +1,56 @@
+;; Canonical NOTA examples for signal-persona-introspect.
+;;
+;; One example per request variant followed by one example per reply
+;; variant. The text-form head is the payload's record-head, not the
+;; IntrospectionRequest / IntrospectionReply variant name — see
+;; ARCHITECTURE.md §6 "NOTA codec quirk on signal_channel! payload
+;; heads."
+;;
+;; The "not-yet-observed" axis lives on `Option<>` wrappers; `None`
+;; on the wire encodes as the bare PascalCase identifier `None`.
+;;
+;; Round-trip witness: tests/canonical_examples.rs parses each record
+;; and asserts the re-encoded text equals the canonical form.
+
+;; ─── Requests ─────────────────────────────────────────────────────
+
+;; IntrospectionRequest::EngineSnapshot
+(EngineSnapshotQuery prototype)
+
+;; IntrospectionRequest::ComponentSnapshot
+(ComponentSnapshotQuery prototype Router)
+
+;; IntrospectionRequest::DeliveryTrace
+(DeliveryTraceQuery prototype trace-7)
+
+;; IntrospectionRequest::PrototypeWitness
+(PrototypeWitnessQuery prototype)
+
+;; ─── Replies ──────────────────────────────────────────────────────
+
+;; IntrospectionReply::EngineSnapshot
+(EngineSnapshot prototype [Router Terminal])
+
+;; IntrospectionReply::ComponentSnapshot — present observation
+(ComponentSnapshot prototype Router Ready)
+
+;; IntrospectionReply::ComponentSnapshot — no observation yet
+(ComponentSnapshot prototype Router None)
+
+;; IntrospectionReply::DeliveryTrace — present observation
+(DeliveryTrace prototype trace-7 Routed)
+
+;; IntrospectionReply::DeliveryTrace — no observation yet
+(DeliveryTrace prototype trace-7 None)
+
+;; IntrospectionReply::PrototypeWitness — all observed
+(PrototypeWitness prototype Ready Ready Ready Routed)
+
+;; IntrospectionReply::PrototypeWitness — none observed
+(PrototypeWitness prototype None None None None)
+
+;; IntrospectionReply::Unimplemented
+(IntrospectionUnimplemented EngineSnapshot NotInPrototypeScope)
+
+;; IntrospectionReply::Denied
+(IntrospectionDenied ComponentSnapshot NotAuthorized)
