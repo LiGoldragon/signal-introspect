@@ -77,7 +77,10 @@ fn canonical_reply_examples_round_trip() {
         (
             IntrospectionReply::EngineSnapshot(EngineSnapshot {
                 engine: engine(),
-                observed_components: vec![IntrospectionTarget::Router, IntrospectionTarget::Terminal],
+                observed_components: vec![
+                    IntrospectionTarget::Router,
+                    IntrospectionTarget::Terminal,
+                ],
             }),
             "(EngineSnapshot prototype [Router Terminal])",
         ),

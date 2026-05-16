@@ -236,7 +236,9 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
     };
 
     let mut encoder = Encoder::new();
-    configuration.encode(&mut encoder).expect("encode configuration");
+    configuration
+        .encode(&mut encoder)
+        .expect("encode configuration");
     let text = encoder.into_string();
     let mut decoder = Decoder::new(&text);
     let recovered =
