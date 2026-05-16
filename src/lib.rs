@@ -9,7 +9,8 @@
 use nota_codec::{NotaEnum, NotaRecord, NotaTransparent};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_core::signal_channel;
-use signal_persona_auth::EngineId;
+use signal_persona::{SocketMode, WirePath};
+use signal_persona_auth::{EngineId, OwnerIdentity};
 
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -193,3 +194,46 @@ signal_channel! {
         }
     }
 }
+
+// ─── Daemon configuration ──────────────────────────────────
+//
+// Typed startup configuration for `persona-introspect-daemon`.
+// The persona manager writes one of these (NOTA or rkyv) to a
+// state-dir path and passes that path as argv. The daemon decodes
+// through `nota_config::ConfigurationSource::from_argv()?.decode()?`
+// and runs with the resulting record. No environment variables on
+// the production launch path.
+
+/// Startup configuration for `persona-introspect-daemon`.
+///
+/// Replaces the previous `PERSONA_INTROSPECT_SOCKET`,
+/// `PERSONA_SOCKET_PATH`, `PERSONA_SOCKET_MODE`,
+/// `PERSONA_SUPERVISION_SOCKET_PATH`,
+/// `PERSONA_SUPERVISION_SOCKET_MODE`,
+/// `PERSONA_INTROSPECT_STORE`, `PERSONA_STATE_PATH`,
+/// `PERSONA_MANAGER_SOCKET_PATH`, and the
+/// `PERSONA_PEER_*` peer-socket enumeration environment-variable
+/// surface.
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+pub struct IntrospectDaemonConfiguration {
+    /// Where the daemon binds its introspection-query Unix socket.
+    pub introspect_socket_path: WirePath,
+    /// chmod applied to the introspection-query socket after bind.
+    pub introspect_socket_mode: SocketMode,
+    /// Where the daemon binds its supervision Unix socket.
+    pub supervision_socket_path: WirePath,
+    /// chmod applied to the supervision socket after bind.
+    pub supervision_socket_mode: SocketMode,
+    /// Path to the introspect daemon's redb store file.
+    pub store_path: WirePath,
+    /// Engine manager's supervision socket (peer).
+    pub manager_socket_path: WirePath,
+    /// Router daemon's domain socket (peer).
+    pub router_socket_path: WirePath,
+    /// Terminal supervisor's domain socket (peer).
+    pub terminal_socket_path: WirePath,
+    /// The engine owner identity passed to the introspect daemon.
+    pub owner_identity: OwnerIdentity,
+}
+
+nota_config::impl_rkyv_configuration!(IntrospectDaemonConfiguration);

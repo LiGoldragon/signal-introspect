@@ -215,3 +215,56 @@ fn introspection_status_enums_are_closed_no_unknown_variants() {
         assert!(!observed.is_empty());
     }
 }
+
+#[test]
+fn introspect_daemon_configuration_round_trips_through_nota_text() {
+    use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
+    use signal_persona::{SocketMode, WirePath};
+    use signal_persona_auth::{OwnerIdentity, UnixUserId};
+    use signal_persona_introspect::IntrospectDaemonConfiguration;
+
+    let configuration = IntrospectDaemonConfiguration {
+        introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),
+        introspect_socket_mode: SocketMode::new(0o600),
+        supervision_socket_path: WirePath::new("/run/persona/X/introspect-supervision.sock"),
+        supervision_socket_mode: SocketMode::new(0o600),
+        store_path: WirePath::new("/var/lib/persona/X/introspect.redb"),
+        manager_socket_path: WirePath::new("/run/persona/X/persona.sock"),
+        router_socket_path: WirePath::new("/run/persona/X/router.sock"),
+        terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
+        owner_identity: OwnerIdentity::UnixUser(UnixUserId::new(1000)),
+    };
+
+    let mut encoder = Encoder::new();
+    configuration.encode(&mut encoder).expect("encode configuration");
+    let text = encoder.into_string();
+    let mut decoder = Decoder::new(&text);
+    let recovered =
+        IntrospectDaemonConfiguration::decode(&mut decoder).expect("decode configuration");
+
+    assert_eq!(recovered, configuration);
+}
+
+#[test]
+fn introspect_daemon_configuration_round_trips_through_rkyv() {
+    use nota_config::ConfigurationRecord;
+    use signal_persona::{SocketMode, WirePath};
+    use signal_persona_auth::{OwnerIdentity, UnixUserId};
+    use signal_persona_introspect::IntrospectDaemonConfiguration;
+
+    let configuration = IntrospectDaemonConfiguration {
+        introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),
+        introspect_socket_mode: SocketMode::new(0o600),
+        supervision_socket_path: WirePath::new("/run/persona/X/introspect-supervision.sock"),
+        supervision_socket_mode: SocketMode::new(0o600),
+        store_path: WirePath::new("/var/lib/persona/X/introspect.redb"),
+        manager_socket_path: WirePath::new("/run/persona/X/persona.sock"),
+        router_socket_path: WirePath::new("/run/persona/X/router.sock"),
+        terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
+        owner_identity: OwnerIdentity::UnixUser(UnixUserId::new(1000)),
+    };
+
+    let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&configuration).expect("archive");
+    let recovered = IntrospectDaemonConfiguration::from_rkyv_bytes(&bytes).expect("decode rkyv");
+    assert_eq!(recovered, configuration);
+}
