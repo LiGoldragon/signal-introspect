@@ -17,6 +17,16 @@ The operational delivery path stays outside this crate.
 - `IntrospectionReply`
 - `IntrospectionTarget`
 - `IntrospectionScope`
+- `ComponentReadiness` (closed enum: `Ready` / `NotReady`). The "not
+  observed yet" axis lives on `Option<ComponentReadiness>` in the
+  carrier records (`ComponentSnapshot.readiness`,
+  `PrototypeWitness.{manager,router,terminal}_seen`); the enum itself
+  has no `Unknown` polling-shape variant.
+- `DeliveryTraceStatus` (closed enum mirroring
+  `signal_persona_router::RouterDeliveryStatus`:
+  `Accepted` / `Routed` / `Delivered` / `Deferred` / `Failed`). Carrier
+  records wrap it as `Option<DeliveryTraceStatus>` when the daemon has
+  not yet observed a trace.
 - `IntrospectionUnimplementedReason` (including `PeerSocketMissing`,
   `PeerSocketUnreachable`, `ComponentObservationMissing`,
   `AwaitingCorrelationCache`).
@@ -64,6 +74,7 @@ surface".
 | Read-shaped payloads use `Match` or `Subscribe`; write-shaped payloads use `Assert`/`Mutate`/`Retract`. Multi-operation atomicity is structural via `Request<Payload>` carrying `NonEmpty<Operation<Payload>>`; no separate `Atomic` verb. Read-algebra (`Project`/`Aggregate`/`Constrain`/`Infer`/`Recurse`) appears inside `Match`/`Subscribe`/`Validate` payloads via `sema-engine`'s `ReadPlan`, never as a root verb. | The `signal_channel!` root declarations enforce this; introspect is read-only inspection plane so all current variants are `Match`. |
 | NOTA derives live on the same typed records. | Cargo tests compile `NotaRecord`, `NotaEnum`, and `NotaTransparent` derives. |
 | The contract contains no daemon code. | Source scan: no Kameo, no Tokio, no socket code. |
+| Wire enums are closed; "not observed yet" is named on `Option<>` wrappers, not by an `Unknown` polling-shape variant inside the enum. | `tests/round_trip.rs::introspection_status_enums_are_closed_no_unknown_variants` exhaustively matches every variant of `ComponentReadiness` and `DeliveryTraceStatus`; `prototype_witness_reply_round_trips_with_no_observations_yet` exercises the `None` carrier shape end-to-end. |
 
 ## 4. Status
 

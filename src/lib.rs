@@ -84,11 +84,18 @@ pub struct EngineSnapshot {
     pub observed_components: Vec<IntrospectionTarget>,
 }
 
+/// Snapshot of one peer component's readiness as observed by the
+/// introspect daemon. `readiness` is `None` when the daemon has not yet
+/// queried the peer (initial state before any observation lands);
+/// `Some(state)` carries the closed observation of that peer's readiness.
+/// The `Option<>` carries the "not yet observed" axis so
+/// `ComponentReadiness` itself stays closed per ESSENCE
+/// §"Perfect specificity at boundaries."
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct ComponentSnapshot {
     pub engine: EngineId,
     pub target: IntrospectionTarget,
-    pub readiness: ComponentReadiness,
+    pub readiness: Option<ComponentReadiness>,
 }
 
 #[derive(
@@ -97,14 +104,20 @@ pub struct ComponentSnapshot {
 pub enum ComponentReadiness {
     Ready,
     NotReady,
-    Unknown,
 }
 
+/// Latest observed delivery state for the named correlation. `status` is
+/// `None` when the introspect daemon has not yet seen any router trace
+/// event for that correlation (subscriptions or pulls have not delivered
+/// the trace yet); `Some(state)` carries the closed status mirroring
+/// `signal_persona_router::RouterDeliveryStatus`. The split keeps
+/// `DeliveryTraceStatus` closed; the "not observed yet" axis is named in
+/// the `Option<>` rather than smuggled into the status enum.
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryTrace {
     pub engine: EngineId,
     pub correlation: CorrelationId,
-    pub status: DeliveryTraceStatus,
+    pub status: Option<DeliveryTraceStatus>,
 }
 
 #[derive(
@@ -116,16 +129,20 @@ pub enum DeliveryTraceStatus {
     Delivered,
     Deferred,
     Failed,
-    Unknown,
 }
 
+/// Roll-up of the prototype's three peer-component observations plus the
+/// most recent delivery trace. Every field is an `Option<>`; `None`
+/// means "the introspect daemon has not yet collected an observation
+/// from that peer in this engine," distinguishable from observed states
+/// without polluting the closed inner enums.
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct PrototypeWitness {
     pub engine: EngineId,
-    pub manager_seen: ComponentReadiness,
-    pub router_seen: ComponentReadiness,
-    pub terminal_seen: ComponentReadiness,
-    pub delivery_status: DeliveryTraceStatus,
+    pub manager_seen: Option<ComponentReadiness>,
+    pub router_seen: Option<ComponentReadiness>,
+    pub terminal_seen: Option<ComponentReadiness>,
+    pub delivery_status: Option<DeliveryTraceStatus>,
 }
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]

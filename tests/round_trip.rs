@@ -128,10 +128,26 @@ fn introspection_request_variants_are_read_shaped_match_operations() {
 fn prototype_witness_reply_round_trips_through_length_prefixed_frame() {
     let reply = IntrospectionReply::PrototypeWitness(PrototypeWitness {
         engine: EngineId::new("prototype"),
-        manager_seen: ComponentReadiness::Ready,
-        router_seen: ComponentReadiness::Ready,
-        terminal_seen: ComponentReadiness::Ready,
-        delivery_status: DeliveryTraceStatus::Delivered,
+        manager_seen: Some(ComponentReadiness::Ready),
+        router_seen: Some(ComponentReadiness::Ready),
+        terminal_seen: Some(ComponentReadiness::Ready),
+        delivery_status: Some(DeliveryTraceStatus::Delivered),
+    });
+    assert_eq!(round_trip_reply(reply.clone()), reply);
+}
+
+#[test]
+fn prototype_witness_reply_round_trips_with_no_observations_yet() {
+    // Witness for the "not observed yet" semantic: the closed-enum fields
+    // stay closed, and the unobserved state is named by None on the
+    // Option<>. Adding back an `Unknown` variant on either inner enum
+    // would defeat the closed-enum integrity test below.
+    let reply = IntrospectionReply::PrototypeWitness(PrototypeWitness {
+        engine: EngineId::new("prototype"),
+        manager_seen: None,
+        router_seen: None,
+        terminal_seen: None,
+        delivery_status: None,
     });
     assert_eq!(round_trip_reply(reply.clone()), reply);
 }
@@ -149,12 +165,12 @@ fn component_observations_are_wrapped_not_defined_here() {
     let component_reply = IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
         engine: EngineId::new("prototype"),
         target: IntrospectionTarget::Router,
-        readiness: ComponentReadiness::Ready,
+        readiness: Some(ComponentReadiness::Ready),
     });
     let trace_reply = IntrospectionReply::DeliveryTrace(DeliveryTrace {
         engine: EngineId::new("prototype"),
         correlation: "fixture-delivery".into(),
-        status: DeliveryTraceStatus::Routed,
+        status: Some(DeliveryTraceStatus::Routed),
     });
 
     assert!(matches!(
@@ -166,4 +182,36 @@ fn component_observations_are_wrapped_not_defined_here() {
         IntrospectionReply::ComponentSnapshot(_)
     ));
     assert!(matches!(trace_reply, IntrospectionReply::DeliveryTrace(_)));
+}
+
+#[test]
+fn introspection_status_enums_are_closed_no_unknown_variants() {
+    // Witness for the closed-enum integrity rule: ComponentReadiness and
+    // DeliveryTraceStatus must enumerate only positively-named observed
+    // states. The "not yet observed" axis lives on Option<> wrapping these
+    // values in their carrier records (ComponentSnapshot.readiness,
+    // DeliveryTrace.status, PrototypeWitness.*), never inside the enums.
+    for readiness in [ComponentReadiness::Ready, ComponentReadiness::NotReady] {
+        let observed = match readiness {
+            ComponentReadiness::Ready => "ready",
+            ComponentReadiness::NotReady => "not-ready",
+        };
+        assert!(!observed.is_empty());
+    }
+    for status in [
+        DeliveryTraceStatus::Accepted,
+        DeliveryTraceStatus::Routed,
+        DeliveryTraceStatus::Delivered,
+        DeliveryTraceStatus::Deferred,
+        DeliveryTraceStatus::Failed,
+    ] {
+        let observed = match status {
+            DeliveryTraceStatus::Accepted => "accepted",
+            DeliveryTraceStatus::Routed => "routed",
+            DeliveryTraceStatus::Delivered => "delivered",
+            DeliveryTraceStatus::Deferred => "deferred",
+            DeliveryTraceStatus::Failed => "failed",
+        };
+        assert!(!observed.is_empty());
+    }
 }
