@@ -1,13 +1,16 @@
 ;; Canonical NOTA examples for signal-persona-introspect.
 ;;
 ;; One example per request variant followed by one example per reply
-;; variant. The text-form head is the payload's record-head, not the
-;; IntrospectionRequest / IntrospectionReply variant name — see
-;; ARCHITECTURE.md §6 "NOTA codec quirk on signal_channel! payload
-;; heads."
+;; variant. Per the three-case PascalCase rule, each data-carrying
+;; enum variant on the wire is `(VariantName <payload>)`; the inner
+;; payload is a NotaRecord-derived struct encoded as a tag-less
+;; `(fields…)`. The outer head names the *Request / *Reply variant
+;; (e.g. `EngineSnapshot`), which can differ from the payload type
+;; name (e.g. `EngineSnapshotQuery`).
 ;;
 ;; The "not-yet-observed" axis lives on `Option<>` wrappers; `None`
-;; on the wire encodes as the bare PascalCase identifier `None`.
+;; on the wire encodes as the bare PascalCase identifier `None`,
+;; `Some(v)` as `(Some <v>)`.
 ;;
 ;; Round-trip witness: tests/canonical_examples.rs parses each record
 ;; and asserts the re-encoded text equals the canonical form.
@@ -15,42 +18,42 @@
 ;; ─── Requests ─────────────────────────────────────────────────────
 
 ;; IntrospectionRequest::EngineSnapshot
-(EngineSnapshotQuery prototype)
+(EngineSnapshot (prototype))
 
 ;; IntrospectionRequest::ComponentSnapshot
-(ComponentSnapshotQuery prototype Router)
+(ComponentSnapshot (prototype Router))
 
 ;; IntrospectionRequest::DeliveryTrace
-(DeliveryTraceQuery prototype trace-7)
+(DeliveryTrace (prototype trace-7))
 
 ;; IntrospectionRequest::PrototypeWitness
-(PrototypeWitnessQuery prototype)
+(PrototypeWitness (prototype))
 
 ;; ─── Replies ──────────────────────────────────────────────────────
 
 ;; IntrospectionReply::EngineSnapshot
-(EngineSnapshot prototype [Router Terminal])
+(EngineSnapshot (prototype [Router Terminal]))
 
 ;; IntrospectionReply::ComponentSnapshot — present observation
-(ComponentSnapshot prototype Router Ready)
+(ComponentSnapshot (prototype Router (Some Ready)))
 
 ;; IntrospectionReply::ComponentSnapshot — no observation yet
-(ComponentSnapshot prototype Router None)
+(ComponentSnapshot (prototype Router None))
 
 ;; IntrospectionReply::DeliveryTrace — present observation
-(DeliveryTrace prototype trace-7 Routed)
+(DeliveryTrace (prototype trace-7 (Some Routed)))
 
 ;; IntrospectionReply::DeliveryTrace — no observation yet
-(DeliveryTrace prototype trace-7 None)
+(DeliveryTrace (prototype trace-7 None))
 
 ;; IntrospectionReply::PrototypeWitness — all observed
-(PrototypeWitness prototype Ready Ready Ready Routed)
+(PrototypeWitness (prototype (Some Ready) (Some Ready) (Some Ready) (Some Routed)))
 
 ;; IntrospectionReply::PrototypeWitness — none observed
-(PrototypeWitness prototype None None None None)
+(PrototypeWitness (prototype None None None None))
 
 ;; IntrospectionReply::Unimplemented
-(IntrospectionUnimplemented EngineSnapshot NotInPrototypeScope)
+(Unimplemented (EngineSnapshot NotInPrototypeScope))
 
 ;; IntrospectionReply::Denied
-(IntrospectionDenied ComponentSnapshot NotAuthorized)
+(Denied (ComponentSnapshot NotAuthorized))
