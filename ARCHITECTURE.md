@@ -10,6 +10,42 @@ It defines `IntrospectionRequest`, `IntrospectionReply`, the targets
 and scopes a query may name, and the typed roll-up records that
 project peer-component observations to a human-facing surface.
 
+## MUST IMPLEMENT — signal architecture migration
+
+This contract is migrating to contract-local verbs per
+`primary/reports/designer/238-signal-architecture-redirection-contract-local-verbs.md`
+and `primary/reports/designer/239-signal-architecture-migration-plan.md`.
+
+Drop the `Match` SignalVerb prefix on every variant. The four current
+read-shaped variants (`EngineSnapshot`, `ComponentSnapshot`,
+`DeliveryTrace`, `PrototypeWitness`) collapse to one contract-local
+verb root — `Observe` reads well for this crate (the public action
+is observing engine state) — with a closed payload enum naming the
+observation kind. Alternatively `Query` if the receiver context
+reads more naturally as querying. Once the universal observer-hook
+lands per `/238` §"§7 Q4" and the universal observer subscription
+pattern, this crate may grow contract-local `Watch` / `Unwatch` verbs
+for the per-component subscription side that the introspect daemon
+subscribes to on peer public sockets. That extension is
+forward-looking; the immediate migration is just the verb-form
+rename of the four current variants.
+
+This crate also adds the subscriber side of the universal observer
+hook (per `/239` §3F): `persona-introspect` subscribes to the
+public socket of every peer to receive copies of inbound contract
+operations and outbound Sema effects. The subscription vocabulary
+for that hook may need to land in this crate (or in a sibling
+`signal-observer` contract) once the designer pass on the hook
+mechanism resolves where the typed observer-subscription records
+live.
+
+References: `primary/reports/designer/238-signal-architecture-redirection-contract-local-verbs.md`,
+`primary/reports/designer/239-signal-architecture-migration-plan.md`.
+
+**Note to remover:** when the refactor lands, remove this section and
+add a `## Migration history — contract-local verbs (2026-05-XX)`
+paragraph noting the shape change.
+
 It is **not** a shared row bucket — component-specific observation
 records start in the component contract that owns the state
 (`signal-persona-terminal`, `signal-persona-router`, etc.). This
