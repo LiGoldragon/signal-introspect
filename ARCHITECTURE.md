@@ -10,40 +10,64 @@ It defines `IntrospectionRequest`, `IntrospectionReply`, the targets
 and scopes a query may name, and the typed roll-up records that
 project peer-component observations to a human-facing surface.
 
-## MUST IMPLEMENT — signal architecture migration
+## MUST IMPLEMENT — three-layer migration
 
-This contract is migrating to contract-local verbs per
-`primary/reports/designer/238-signal-architecture-redirection-contract-local-verbs.md`
-and `primary/reports/designer/239-signal-architecture-migration-plan.md`.
+This contract is migrating to the three-layer model affirmed
+2026-05-20 per
+`primary/reports/designer/246-v4-bundled-fix-deep-design-with-examples.md`
+and `primary/reports/designer/248-three-layer-changes-for-operators.md`.
 
-Drop the `Match` SignalVerb prefix on every variant. The four current
-read-shaped variants (`EngineSnapshot`, `ComponentSnapshot`,
-`DeliveryTrace`, `PrototypeWitness`) collapse to one contract-local
-verb root — `Observe` reads well for this crate (the public action
-is observing engine state) — with a closed payload enum naming the
-observation kind. Alternatively `Query` if the receiver context
-reads more naturally as querying. Once the universal observer-hook
-lands per `/238` §"§7 Q4" and the universal observer subscription
-pattern, this crate may grow contract-local `Watch` / `Unwatch` verbs
-for the per-component subscription side that the introspect daemon
-subscribes to on peer public sockets. That extension is
-forward-looking; the immediate migration is just the verb-form
-rename of the four current variants.
+**Layer 1 — Contract Operations on the wire (this crate).** Drop the
+SignalVerb wrappers entirely. The four current read-shaped variants
+(`EngineSnapshot`, `ComponentSnapshot`, `DeliveryTrace`,
+`PrototypeWitness`) collapse to one contract-local verb root —
+`Observe` reads well for this crate (the public action is observing
+engine state) — with a closed payload enum naming the observation
+kind. Alternatively `Query` if the receiver context reads more
+naturally as querying.
 
-This crate also adds the subscriber side of the universal observer
-hook (per `/239` §3F): `persona-introspect` subscribes to the
-public socket of every peer to receive copies of inbound contract
-operations and outbound Sema effects. The subscription vocabulary
-for that hook may need to land in this crate (or in a sibling
-`signal-observer` contract) once the designer pass on the hook
-mechanism resolves where the typed observer-subscription records
-live.
+**Mandatory `Tap`/`Untap` for persona components.** Persona-introspect
+is a persona component, so its observable surface is standardized.
+The macro-injected `Tap(ObserverFilter)` /
+`Untap(IntrospectObserverSubscriptionToken)` verbs are mandatory on
+introspect's own ordinary socket via an `observable { … }` block —
+clients can subscribe to introspect's own operation/effect events
+just like any other persona component.
 
-References: `primary/reports/designer/238-signal-architecture-redirection-contract-local-verbs.md`,
-`primary/reports/designer/239-signal-architecture-migration-plan.md`.
+**Subscriber side of the universal observer hook.** Persona-introspect
+is the canonical *consumer* of every persona daemon's mandatory
+`Tap`/`Untap` surface. It opens subscriptions on each peer
+`signal-persona-*` ordinary socket, receives the standardized
+`OperationReceived` / `SemaEffectEmitted` events, and projects them
+into the typed roll-up records that this contract wraps. The
+client-side vocabulary for opening those subscriptions lives in each
+peer `signal-persona-*` contract (via the macro-injected `Tap` verb);
+this crate does not redefine them.
+
+**Layer 2 — Component Commands (persona-introspect daemon).** The
+introspect daemon owns its typed Command enum (e.g.
+`IntrospectCommand::CollectEngineSnapshot`,
+`IntrospectCommand::CollectComponentSnapshot`,
+`IntrospectCommand::CollectDeliveryTrace`,
+`IntrospectCommand::CollectPrototypeWitness`) plus a `CommandExecutor`
+that aggregates observations from peer daemons.
+
+**Layer 3 — Sema classification (signal-sema).** Each Component
+Command projects to a payloadless `SemaOperation` class label via
+`ToSemaOperation`. Cross-component observers can filter introspect's
+own activity by class.
+
+**Frame layer.** The dependency on `signal-core` shifts to
+`signal-frame`.
+
+References:
+- `primary/reports/designer/246-v4-bundled-fix-deep-design-with-examples.md`
+- `primary/reports/designer/248-three-layer-changes-for-operators.md`
+- `primary/skills/component-triad.md` §"Verbs come in three layers"
+- `primary/skills/contract-repo.md` §"Public contracts use contract-local operation verbs"
 
 **Note to remover:** when the refactor lands, remove this section and
-add a `## Migration history — contract-local verbs (2026-05-XX)`
+add a `## Migration history — three-layer model (2026-05-XX)`
 paragraph noting the shape change.
 
 It is **not** a shared row bucket — component-specific observation
@@ -88,8 +112,8 @@ subscription variants.
 - Query records for engine snapshot, component snapshot, delivery
   trace, and the prototype rollup `PrototypeWitness`.
 - Reply records that wrap or summarize observations for projection.
-- Signal root-verb mapping for every request variant via
-  `signal_channel!`-generated `IntrospectionRequest::signal_verb()`.
+- Contract-local verbs declared in the `signal_channel!` invocation;
+  Sema classification (Layer 3) is daemon-side projection only.
 
 ## 3 · Closed-enum integrity
 
@@ -136,24 +160,27 @@ that peer."* `Some(state)` means *"this is the closed observation."*
 The distinction is structural; consumers pattern-match on the
 `Option` shape, not on a sentinel inside a present value.
 
-## 4 · Signal root verbs
+## 4 · Sema-class projections (Layer 3)
 
-Every `IntrospectionRequest` variant declares its root verb in the
-`signal_channel!` declaration. `signal-core` generates
-`IntrospectionRequest::signal_verb()` and
-`IntrospectionRequest::into_request()`. All current variants are
-read-shaped:
+Each contract-local operation's daemon-side Component Command
+projects to a payloadless Sema class via `ToSemaOperation`. All
+current operations are read-shaped:
 
 ```text
-EngineSnapshot       -> Match
-ComponentSnapshot    -> Match
-DeliveryTrace        -> Match
-PrototypeWitness     -> Match
+Observe (EngineSnapshot kind)     -> Match
+Observe (ComponentSnapshot kind)  -> Match
+Observe (DeliveryTrace kind)      -> Match
+Observe (PrototypeWitness kind)   -> Match
+Tap (mandatory observability)     -> Subscribe
+Untap (mandatory observability)   -> Retract
 ```
 
-When `SubscribeComponent` lands, it maps to `Subscribe` and opens a
-typed event stream with a request-side retraction variant and a
-reply-side acknowledgement.
+When per-peer commit-then-emit streaming lands, the additional
+operation maps to `Subscribe` and opens a typed event stream with a
+request-side retraction variant and a reply-side acknowledgement.
+
+The wire form carries the contract-local verb only; the Sema class
+label is computed at observation publish time inside the daemon.
 
 ## 5 · Constraints
 
@@ -161,18 +188,18 @@ reply-side acknowledgement.
 |---|---|
 | The central contract asks and wraps; it does not define component rows. | Public type review: no router/terminal/manager row vocabulary defined here. Source-scan witness names "central contract does not define peer rows." |
 | Every request/reply travels as a Signal frame. | `tests/round_trip.rs` length-prefixed frame tests per variant. |
-| Every `IntrospectionRequest` variant declares a Signal root verb. | The `signal_channel!` declaration names each root; `signal-core` generates the verb-mapping methods; round-trip tests assert verb+payload alignment. |
-| Read-shaped payloads use `Match` or `Subscribe`; write-shaped payloads use `Assert` / `Mutate` / `Retract`. | Today all variants are `Match`; the `signal_channel!` declaration is the witness. |
+| Every `IntrospectionRequest` variant is a contract-local verb in verb form. | The `signal_channel!` declaration names each verb; round-trip tests assert each variant's NOTA head. Sema classification is daemon-side projection only. |
+| Read-shaped payloads project to Sema `Match` / `Subscribe`; write-shaped payloads project to `Assert` / `Mutate` / `Retract`. | Daemon-side `ToSemaOperation` impl is the witness; today all read-shaped operations project to `Match`. |
 | NOTA derives live on the same typed records. | Cargo tests compile `NotaRecord`, `NotaEnum`, and `NotaTransparent` derives; canonical examples round-trip the text form. |
 | The contract contains no daemon code. | Source scan: no Kameo, Tokio, socket, or redb code. |
 | Wire enums contain no `Unknown` variant. | `tests/round_trip.rs::introspection_status_enums_are_closed_no_unknown_variants` exhaustively matches every `ComponentReadiness` and `DeliveryTraceStatus` variant. Adding an `Unknown` variant breaks the match. |
 | Any record name containing the word `Unknown` represents a positive "entity not in our state" rejection, not a polling-shape escape hatch. | This crate has no `Unknown*` record names today; the "not observed yet" axis lives on `Option<>` wrappers on the carrier records. |
 | The "not yet observed" axis lives on `Option<>` wrappers, never inside a closed status enum. | `prototype_witness_reply_round_trips_with_no_observations_yet` exercises the all-`None` carrier shape end-to-end through the length-prefixed frame. |
-| Every `signal_channel!` request variant has a typed `signal_verb()` mapping. | The macro generates `signal_verb()`; round-trip tests assert each variant maps to `SignalVerb::Match` for current scope. |
+| Each variant's NOTA head matches the contract-local verb declared in `signal_channel!`. | The macro generates the codec; round-trip tests assert each variant's NOTA head. |
 | Round-trip witnesses cover every variant in rkyv. | `tests/round_trip.rs` exercises every request and reply variant through `Frame::encode_length_prefixed` / `decode_length_prefixed`. |
 | Round-trip witnesses cover every variant in NOTA. | `examples/canonical.nota` holds one canonical text example per request/reply variant; round-trip tests parse and re-emit each. |
 | No stringly-typed dispatch (`match s.as_str()`) for closed-set states. | All status/scope/reason fields are typed closed enums. |
-| Contract crate dependencies use a named API reference (branch or tag), not a raw revision pin. | `Cargo.toml` review: `signal-core` and downstream contract crates declare `git = "..."` with a named-branch shape; raw `rev = "..."` pins are not used. |
+| Contract crate dependencies use a named API reference (branch or tag), not a raw revision pin. | `Cargo.toml` review: `signal-frame` and downstream contract crates declare `git = "..."` with a named-branch shape; raw `rev = "..."` pins are not used. |
 
 ## 6 · NOTA codec quirk on `signal_channel!` payload heads
 
@@ -223,7 +250,8 @@ tests/
 
 ## See also
 
-- `signal-core/src/channel.rs` — the macro.
+- `signal-frame/macros/src/validate.rs` — the macro.
+- `~/primary/skills/component-triad.md` §"Verbs come in three layers".
 - `signal-persona-router/ARCHITECTURE.md` — router observation rows
   this crate wraps via `Option<DeliveryTraceStatus>` carriers.
 - `signal-persona-terminal/ARCHITECTURE.md` — terminal observation
