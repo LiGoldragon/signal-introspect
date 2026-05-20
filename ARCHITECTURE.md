@@ -38,7 +38,7 @@ just like any other persona component.
 is the canonical *consumer* of every persona daemon's mandatory
 `Tap`/`Untap` surface. It opens subscriptions on each peer
 `signal-persona-*` ordinary socket, receives the standardized
-`OperationReceived` / `SemaEffectEmitted` events, and projects them
+`OperationReceived` / `EffectEmitted` events, and projects them
 into the typed roll-up records that this contract wraps. The
 client-side vocabulary for opening those subscriptions lives in each
 peer `signal-persona-*` contract (via the macro-injected `Tap` verb);
