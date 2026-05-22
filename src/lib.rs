@@ -10,7 +10,8 @@ use nota_codec::{NotaEnum, NotaRecord, NotaTransparent};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_core::signal_channel;
 use signal_persona::{SocketMode, WirePath};
-use signal_persona_auth::{EngineId, OwnerIdentity};
+use signal_persona_auth::{ComponentName, EngineId, OwnerIdentity};
+pub use signal_persona_message::MessageSlot as MessageIdentifier;
 
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -36,27 +37,6 @@ pub enum IntrospectionScope {
     PrototypeWitness,
 }
 
-#[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaTransparent, Debug, Clone, PartialEq, Eq, Hash,
-)]
-pub struct CorrelationId(String);
-
-impl CorrelationId {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
-}
-
-impl From<&str> for CorrelationId {
-    fn from(value: &str) -> Self {
-        Self::new(value)
-    }
-}
-
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct EngineSnapshotQuery {
     pub engine: EngineId,
@@ -71,7 +51,8 @@ pub struct ComponentSnapshotQuery {
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryTraceQuery {
     pub engine: EngineId,
-    pub correlation: CorrelationId,
+    pub message_identifier: MessageIdentifier,
+    pub originator: ComponentName,
 }
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
@@ -107,18 +88,103 @@ pub enum ComponentReadiness {
     NotReady,
 }
 
-/// Latest observed delivery state for the named correlation. `status` is
-/// `None` when the introspect daemon has not yet seen any router trace
-/// event for that correlation (subscriptions or pulls have not delivered
-/// the trace yet); `Some(state)` carries the closed status mirroring
-/// `signal_persona_router::RouterDeliveryStatus`. The split keeps
-/// `DeliveryTraceStatus` closed; the "not observed yet" axis is named in
-/// the `Option<>` rather than smuggled into the status enum.
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaTransparent,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+)]
+pub struct HopIndex(u32);
+
+impl HopIndex {
+    pub const fn new(value: u32) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> u32 {
+        self.0
+    }
+
+    pub const fn next(self) -> Self {
+        Self(self.0.saturating_add(1))
+    }
+}
+
+/// Cross-component delivery correlation key. The first three fields are
+/// the join key; `hop_index` is the deterministic order key inside one
+/// delivery chain.
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+pub struct DeliveryTraceKey {
+    pub engine: EngineId,
+    pub message_identifier: MessageIdentifier,
+    pub originator: ComponentName,
+    pub hop_index: HopIndex,
+}
+
+impl DeliveryTraceKey {
+    pub fn new(
+        engine: EngineId,
+        message_identifier: MessageIdentifier,
+        originator: ComponentName,
+        hop_index: HopIndex,
+    ) -> Self {
+        Self {
+            engine,
+            message_identifier,
+            originator,
+            hop_index,
+        }
+    }
+
+    pub fn matches_query(&self, query: &DeliveryTraceQuery) -> bool {
+        self.engine == query.engine
+            && self.message_identifier == query.message_identifier
+            && self.originator == query.originator
+    }
+}
+
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+pub struct DeliveryTraceEvent {
+    pub key: DeliveryTraceKey,
+    pub component: ComponentName,
+    pub status: DeliveryTraceStatus,
+}
+
+impl DeliveryTraceEvent {
+    pub fn new(
+        key: DeliveryTraceKey,
+        component: ComponentName,
+        status: DeliveryTraceStatus,
+    ) -> Self {
+        Self {
+            key,
+            component,
+            status,
+        }
+    }
+
+    pub fn key(&self) -> &DeliveryTraceKey {
+        &self.key
+    }
+}
+
+/// Hop-ordered delivery observations for one message chain. An empty
+/// `events` vector means the introspect daemon has not yet seen any Tap
+/// event for the selected join key.
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryTrace {
     pub engine: EngineId,
-    pub correlation: CorrelationId,
-    pub status: Option<DeliveryTraceStatus>,
+    pub message_identifier: MessageIdentifier,
+    pub originator: ComponentName,
+    pub events: Vec<DeliveryTraceEvent>,
 }
 
 #[derive(

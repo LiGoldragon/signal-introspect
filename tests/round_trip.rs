@@ -2,12 +2,13 @@ use signal_core::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SignalVerb, SubReply,
 };
-use signal_persona_auth::EngineId;
+use signal_persona_auth::{ComponentName, EngineId};
 use signal_persona_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
-    DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot, EngineSnapshotQuery,
-    IntrospectionFrame as Frame, IntrospectionFrameBody as FrameBody, IntrospectionReply,
-    IntrospectionRequest, IntrospectionTarget, PrototypeWitness, PrototypeWitnessQuery,
+    DeliveryTraceEvent, DeliveryTraceKey, DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot,
+    EngineSnapshotQuery, HopIndex, IntrospectionFrame as Frame,
+    IntrospectionFrameBody as FrameBody, IntrospectionReply, IntrospectionRequest,
+    IntrospectionTarget, MessageIdentifier, PrototypeWitness, PrototypeWitnessQuery,
 };
 
 fn exchange() -> ExchangeIdentifier {
@@ -87,7 +88,8 @@ fn component_snapshot_query_round_trips_through_length_prefixed_frame() {
 fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
         engine: EngineId::new("prototype"),
-        correlation: "fixture-delivery".into(),
+        message_identifier: MessageIdentifier::new(7),
+        originator: ComponentName::Message,
     });
     round_trip_request(request);
 }
@@ -112,7 +114,8 @@ fn introspection_request_variants_are_read_shaped_match_operations() {
         }),
         IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
             engine: EngineId::new("prototype"),
-            correlation: "fixture-delivery".into(),
+            message_identifier: MessageIdentifier::new(7),
+            originator: ComponentName::Message,
         }),
         IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
             engine: EngineId::new("prototype"),
@@ -169,8 +172,18 @@ fn component_observations_are_wrapped_not_defined_here() {
     });
     let trace_reply = IntrospectionReply::DeliveryTrace(DeliveryTrace {
         engine: EngineId::new("prototype"),
-        correlation: "fixture-delivery".into(),
-        status: Some(DeliveryTraceStatus::Routed),
+        message_identifier: MessageIdentifier::new(7),
+        originator: ComponentName::Message,
+        events: vec![DeliveryTraceEvent::new(
+            DeliveryTraceKey::new(
+                EngineId::new("prototype"),
+                MessageIdentifier::new(7),
+                ComponentName::Message,
+                HopIndex::new(1),
+            ),
+            ComponentName::Router,
+            DeliveryTraceStatus::Routed,
+        )],
     });
 
     assert!(matches!(
@@ -182,6 +195,29 @@ fn component_observations_are_wrapped_not_defined_here() {
         IntrospectionReply::ComponentSnapshot(_)
     ));
     assert!(matches!(trace_reply, IntrospectionReply::DeliveryTrace(_)));
+}
+
+#[test]
+fn delivery_trace_key_round_trips_with_four_correlation_fields() {
+    let trace_key = DeliveryTraceKey::new(
+        EngineId::new("prototype"),
+        MessageIdentifier::new(7),
+        ComponentName::Message,
+        HopIndex::new(3),
+    );
+    let reply = IntrospectionReply::DeliveryTrace(DeliveryTrace {
+        engine: EngineId::new("prototype"),
+        message_identifier: MessageIdentifier::new(7),
+        originator: ComponentName::Message,
+        events: vec![DeliveryTraceEvent::new(
+            trace_key.clone(),
+            ComponentName::Harness,
+            DeliveryTraceStatus::Failed,
+        )],
+    });
+
+    assert_eq!(round_trip_reply(reply.clone()), reply);
+    assert_eq!(trace_key.hop_index.value(), 3);
 }
 
 #[test]

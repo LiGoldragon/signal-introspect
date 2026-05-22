@@ -24,7 +24,7 @@
 (ComponentSnapshot (prototype Router))
 
 ;; IntrospectionRequest::DeliveryTrace
-(DeliveryTrace (prototype trace-7))
+(DeliveryTrace (prototype 7 Message))
 
 ;; IntrospectionRequest::PrototypeWitness
 (PrototypeWitness (prototype))
@@ -41,10 +41,10 @@
 (ComponentSnapshot (prototype Router None))
 
 ;; IntrospectionReply::DeliveryTrace — present observation
-(DeliveryTrace (prototype trace-7 (Some Routed)))
+(DeliveryTrace (prototype 7 Message [((prototype 7 Message 1) Router Routed)]))
 
 ;; IntrospectionReply::DeliveryTrace — no observation yet
-(DeliveryTrace (prototype trace-7 None))
+(DeliveryTrace (prototype 7 Message []))
 
 ;; IntrospectionReply::PrototypeWitness — all observed
 (PrototypeWitness (prototype (Some Ready) (Some Ready) (Some Ready) (Some Routed)))

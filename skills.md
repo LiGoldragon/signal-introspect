@@ -67,10 +67,15 @@ owns the observed state. This crate asks and wraps.
 - **Wire enums are closed.** `ComponentReadiness` and
   `DeliveryTraceStatus` carry no `Unknown` variant. The
   "not-yet-observed" axis lives on `Option<>` wrappers on the carrier
-  records (`ComponentSnapshot.readiness`, `DeliveryTrace.status`,
+  records (`ComponentSnapshot.readiness`,
   `PrototypeWitness.{manager,router,terminal}_seen`,
-  `PrototypeWitness.delivery_status`). `None` means "no observation
-  yet"; `Some(state)` carries the closed observation.
+  `PrototypeWitness.delivery_status`) or on an empty vector for
+  `DeliveryTrace.events`. `None` or `[]` means "no observation yet";
+  `Some(state)` or a present event carries the closed observation.
+- **Delivery traces use a four-field key.** `DeliveryTraceKey` is
+  `(engine, message_identifier, originator, hop_index)`. The first
+  three fields join one delivery chain; `hop_index` orders events
+  without clock sorting.
 - **Every request variant declares a Signal root verb.** The
   `signal_channel!` declaration is the source of truth; the macro
   generates `IntrospectionRequest::signal_verb()` and round-trip
@@ -119,6 +124,12 @@ Wrong:                              Right:
                                           Accepted, Routed, Delivered, Deferred, Failed,
                                       }
 ```
+
+For delivery traces, the carrier is `DeliveryTrace.events:
+Vec<DeliveryTraceEvent>` rather than `Option<DeliveryTraceStatus>`.
+An empty vector means no correlated Tap events have arrived for the
+join key; a populated vector is sorted by
+`DeliveryTraceKey.hop_index`.
 
 ### Adding a SubscribeComponent variant
 

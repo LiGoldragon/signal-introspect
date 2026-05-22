@@ -334,6 +334,21 @@ dependencies = [
  "signal-core",
  "signal-persona",
  "signal-persona-auth",
+ "signal-persona-message",
+ "thiserror",
+]
+
+[[package]]
+name = "signal-persona-message"
+version = "0.1.0"
+source = "git+https://github.com/LiGoldragon/signal-persona-message.git?branch=main#850bd0b11925b8926e07713ebab6b78cc3222f0f"
+dependencies = [
+ "nota-codec",
+ "nota-config",
+ "rkyv",
+ "signal-core",
+ "signal-persona",
+ "signal-persona-auth",
  "thiserror",
 ]
 

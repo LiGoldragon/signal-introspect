@@ -76,8 +76,8 @@ records start in the component contract that owns the state
 crate wraps; it does not redefine.
 
 Wire enums are closed. The "not yet observed" axis lives on
-`Option<>` wrappers on the carrier records (`ComponentSnapshot`,
-`DeliveryTrace`, `PrototypeWitness`); the inner status enums
+`Option<>` wrappers or an empty vector on carrier records
+(`ComponentSnapshot`, `DeliveryTrace`, `PrototypeWitness`); the inner status enums
 (`ComponentReadiness`, `DeliveryTraceStatus`) stay closed and never
 carry an `Unknown` placeholder.
 
@@ -105,8 +105,11 @@ subscription variants.
 - `DeliveryTraceStatus` (closed enum mirroring
   `signal_persona_router::RouterDeliveryStatus`:
   `Accepted` / `Routed` / `Delivered` / `Deferred` / `Failed`). Carrier
-  records wrap it as `Option<DeliveryTraceStatus>` when no trace has
-  arrived.
+  records place it on hop-keyed `DeliveryTraceEvent` rows.
+- `DeliveryTraceKey` — four-field cross-component correlation key:
+  `engine`, `message_identifier`, `originator`, and `hop_index`. The
+  first three fields join one message-delivery chain; `hop_index`
+  orders events without clocks.
 - `IntrospectionUnimplementedReason` and `IntrospectionDeniedReason`
   (closed positive rejection causes).
 - Query records for engine snapshot, component snapshot, delivery
@@ -144,21 +147,22 @@ IntrospectionDeniedReason
 ```
 
 Carrier records that need an observation-not-yet-arrived state wrap
-the inner enum as `Option<…>`:
+the inner enum as `Option<…>` or use an empty event vector:
 
 ```text
 ComponentSnapshot  | readiness:        Option<ComponentReadiness>
-DeliveryTrace      | status:           Option<DeliveryTraceStatus>
+DeliveryTrace      | events:           Vec<DeliveryTraceEvent>
 PrototypeWitness   | manager_seen:     Option<ComponentReadiness>
 PrototypeWitness   | router_seen:      Option<ComponentReadiness>
 PrototypeWitness   | terminal_seen:    Option<ComponentReadiness>
 PrototypeWitness   | delivery_status:  Option<DeliveryTraceStatus>
 ```
 
-`None` means *"the daemon has not yet collected an observation from
-that peer."* `Some(state)` means *"this is the closed observation."*
-The distinction is structural; consumers pattern-match on the
-`Option` shape, not on a sentinel inside a present value.
+`None` or `[]` means *"the daemon has not yet collected an
+observation from that peer or trace."* `Some(state)` or a
+`DeliveryTraceEvent` means *"this is the closed observation."* The
+distinction is structural; consumers pattern-match on the carrier
+shape, not on a sentinel inside a present value.
 
 ## 4 · Sema-class projections (Layer 3)
 
@@ -169,7 +173,7 @@ current operations are read-shaped:
 ```text
 Observe (EngineSnapshot kind)     -> Match
 Observe (ComponentSnapshot kind)  -> Match
-Observe (DeliveryTrace kind)      -> Match
+Observe (DeliveryTrace key)       -> Match
 Observe (PrototypeWitness kind)   -> Match
 Tap (mandatory observability)     -> Subscribe
 Untap (mandatory observability)   -> Retract
@@ -195,6 +199,7 @@ label is computed at observation publish time inside the daemon.
 | Wire enums contain no `Unknown` variant. | `tests/round_trip.rs::introspection_status_enums_are_closed_no_unknown_variants` exhaustively matches every `ComponentReadiness` and `DeliveryTraceStatus` variant. Adding an `Unknown` variant breaks the match. |
 | Any record name containing the word `Unknown` represents a positive "entity not in our state" rejection, not a polling-shape escape hatch. | This crate has no `Unknown*` record names today; the "not observed yet" axis lives on `Option<>` wrappers on the carrier records. |
 | The "not yet observed" axis lives on `Option<>` wrappers, never inside a closed status enum. | `prototype_witness_reply_round_trips_with_no_observations_yet` exercises the all-`None` carrier shape end-to-end through the length-prefixed frame. |
+| Delivery trace correlation uses the four-field key `(engine, message_identifier, originator, hop_index)`. | `tests/round_trip.rs::delivery_trace_key_round_trips_with_four_correlation_fields` proves the key rides the contract reply. |
 | Each variant's NOTA head matches the contract-local verb declared in `signal_channel!`. | The macro generates the codec; round-trip tests assert each variant's NOTA head. |
 | Round-trip witnesses cover every variant in rkyv. | `tests/round_trip.rs` exercises every request and reply variant through `Frame::encode_length_prefixed` / `decode_length_prefixed`. |
 | Round-trip witnesses cover every variant in NOTA. | `examples/canonical.nota` holds one canonical text example per request/reply variant; round-trip tests parse and re-emit each. |
@@ -253,6 +258,6 @@ tests/
 - `signal-frame/macros/src/validate.rs` — the macro.
 - `~/primary/skills/component-triad.md` §"Verbs come in three layers".
 - `signal-persona-router/ARCHITECTURE.md` — router observation rows
-  this crate wraps via `Option<DeliveryTraceStatus>` carriers.
+  this crate wraps as `DeliveryTraceEvent` carriers.
 - `signal-persona-terminal/ARCHITECTURE.md` — terminal observation
   rows this crate wraps via `ComponentObservationResult`.

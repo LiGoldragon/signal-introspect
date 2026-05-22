@@ -8,23 +8,20 @@
 //! examples file aligned with the typed surface.
 
 use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
-use signal_persona_auth::EngineId;
+use signal_persona_auth::{ComponentName, EngineId};
 use signal_persona_introspect::{
-    ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, CorrelationId, DeliveryTrace,
-    DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot, EngineSnapshotQuery,
-    IntrospectionDenied, IntrospectionDeniedReason, IntrospectionReply, IntrospectionRequest,
-    IntrospectionScope, IntrospectionTarget, IntrospectionUnimplemented,
-    IntrospectionUnimplementedReason, PrototypeWitness, PrototypeWitnessQuery,
+    ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
+    DeliveryTraceEvent, DeliveryTraceKey, DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot,
+    EngineSnapshotQuery, HopIndex, IntrospectionDenied, IntrospectionDeniedReason,
+    IntrospectionReply, IntrospectionRequest, IntrospectionScope, IntrospectionTarget,
+    IntrospectionUnimplemented, IntrospectionUnimplementedReason, MessageIdentifier,
+    PrototypeWitness, PrototypeWitnessQuery,
 };
 
 const CANONICAL: &str = include_str!("../examples/canonical.nota");
 
 fn engine() -> EngineId {
     EngineId::new("prototype")
-}
-
-fn correlation() -> CorrelationId {
-    CorrelationId::new("trace-7")
 }
 
 #[test]
@@ -44,9 +41,10 @@ fn canonical_request_examples_round_trip() {
         (
             IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
                 engine: engine(),
-                correlation: correlation(),
+                message_identifier: MessageIdentifier::new(7),
+                originator: ComponentName::Message,
             }),
-            "(DeliveryTrace (prototype trace-7))",
+            "(DeliveryTrace (prototype 7 Message))",
         ),
         (
             IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { engine: engine() }),
@@ -103,18 +101,29 @@ fn canonical_reply_examples_round_trip() {
         (
             IntrospectionReply::DeliveryTrace(DeliveryTrace {
                 engine: engine(),
-                correlation: correlation(),
-                status: Some(DeliveryTraceStatus::Routed),
+                message_identifier: MessageIdentifier::new(7),
+                originator: ComponentName::Message,
+                events: vec![DeliveryTraceEvent::new(
+                    DeliveryTraceKey::new(
+                        engine(),
+                        MessageIdentifier::new(7),
+                        ComponentName::Message,
+                        HopIndex::new(1),
+                    ),
+                    ComponentName::Router,
+                    DeliveryTraceStatus::Routed,
+                )],
             }),
-            "(DeliveryTrace (prototype trace-7 (Some Routed)))",
+            "(DeliveryTrace (prototype 7 Message [((prototype 7 Message 1) Router Routed)]))",
         ),
         (
             IntrospectionReply::DeliveryTrace(DeliveryTrace {
                 engine: engine(),
-                correlation: correlation(),
-                status: None,
+                message_identifier: MessageIdentifier::new(7),
+                originator: ComponentName::Message,
+                events: Vec::new(),
             }),
-            "(DeliveryTrace (prototype trace-7 None))",
+            "(DeliveryTrace (prototype 7 Message []))",
         ),
         (
             IntrospectionReply::PrototypeWitness(PrototypeWitness {
