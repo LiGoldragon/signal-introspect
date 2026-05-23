@@ -110,6 +110,9 @@ subscription variants.
   `engine`, `message_identifier`, `originator`, and `hop_index`. The
   first three fields join one message-delivery chain; `hop_index`
   orders events without clocks.
+- `DeliveryTraceJoinKey` — the first-three-field join portion of a
+  delivery trace key. Store implementations use it as the range-prefix
+  for all hop rows that belong to one delivery.
 - `IntrospectionUnimplementedReason` and `IntrospectionDeniedReason`
   (closed positive rejection causes).
 - Query records for engine snapshot, component snapshot, delivery

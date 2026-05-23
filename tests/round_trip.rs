@@ -218,6 +218,13 @@ fn delivery_trace_key_round_trips_with_four_correlation_fields() {
 
     assert_eq!(round_trip_reply(reply.clone()), reply);
     assert_eq!(trace_key.hop_index.value(), 3);
+    assert_eq!(trace_key.next_hop().hop_index.value(), 4);
+    assert_eq!(trace_key.join_key().engine, EngineId::new("prototype"));
+    assert_eq!(
+        trace_key.join_key().message_identifier,
+        MessageIdentifier::new(7)
+    );
+    assert_eq!(trace_key.join_key().originator, ComponentName::Message);
 }
 
 #[test]

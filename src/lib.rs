@@ -55,6 +55,16 @@ pub struct DeliveryTraceQuery {
     pub originator: ComponentName,
 }
 
+impl DeliveryTraceQuery {
+    pub fn join_key(&self) -> DeliveryTraceJoinKey {
+        DeliveryTraceJoinKey::new(
+            self.engine.clone(),
+            self.message_identifier,
+            self.originator,
+        )
+    }
+}
+
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct PrototypeWitnessQuery {
     pub engine: EngineId,
@@ -118,6 +128,34 @@ impl HopIndex {
     }
 }
 
+/// Join portion of [`DeliveryTraceKey`]. All hops for one delivery
+/// share this value; `DeliveryTraceKey.hop_index` orders the events
+/// inside the joined chain.
+#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+pub struct DeliveryTraceJoinKey {
+    pub engine: EngineId,
+    pub message_identifier: MessageIdentifier,
+    pub originator: ComponentName,
+}
+
+impl DeliveryTraceJoinKey {
+    pub fn new(
+        engine: EngineId,
+        message_identifier: MessageIdentifier,
+        originator: ComponentName,
+    ) -> Self {
+        Self {
+            engine,
+            message_identifier,
+            originator,
+        }
+    }
+
+    pub fn matches_query(&self, query: &DeliveryTraceQuery) -> bool {
+        self == &query.join_key()
+    }
+}
+
 /// Cross-component delivery correlation key. The first three fields are
 /// the join key; `hop_index` is the deterministic order key inside one
 /// delivery chain.
@@ -145,9 +183,24 @@ impl DeliveryTraceKey {
     }
 
     pub fn matches_query(&self, query: &DeliveryTraceQuery) -> bool {
-        self.engine == query.engine
-            && self.message_identifier == query.message_identifier
-            && self.originator == query.originator
+        self.join_key().matches_query(query)
+    }
+
+    pub fn join_key(&self) -> DeliveryTraceJoinKey {
+        DeliveryTraceJoinKey::new(
+            self.engine.clone(),
+            self.message_identifier,
+            self.originator,
+        )
+    }
+
+    pub fn next_hop(&self) -> Self {
+        Self::new(
+            self.engine.clone(),
+            self.message_identifier,
+            self.originator,
+            self.hop_index.next(),
+        )
     }
 }
 
