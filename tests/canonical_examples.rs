@@ -8,7 +8,6 @@
 //! examples file aligned with the typed surface.
 
 use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
-use signal_persona_auth::{ComponentName, EngineId};
 use signal_persona_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
     DeliveryTraceEvent, DeliveryTraceKey, DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot,
@@ -17,11 +16,12 @@ use signal_persona_introspect::{
     IntrospectionUnimplemented, IntrospectionUnimplementedReason, MessageIdentifier,
     PrototypeWitness, PrototypeWitnessQuery,
 };
+use signal_persona_origin::{ComponentName, EngineIdentifier};
 
 const CANONICAL: &str = include_str!("../examples/canonical.nota");
 
-fn engine() -> EngineId {
-    EngineId::new("prototype")
+fn engine() -> EngineIdentifier {
+    EngineIdentifier::new("prototype")
 }
 
 #[test]

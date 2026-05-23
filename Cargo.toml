@@ -17,7 +17,7 @@ nota-codec          = { git = "https://github.com/LiGoldragon/nota-codec.git", b
 nota-config         = { git = "https://github.com/LiGoldragon/nota-config.git", branch = "main" }
 signal-core         = { git = "https://github.com/LiGoldragon/signal-core.git" }
 signal-persona      = { git = "https://github.com/LiGoldragon/signal-persona.git" }
-signal-persona-auth = { git = "https://github.com/LiGoldragon/signal-persona-auth.git" }
+signal-persona-origin = { git = "https://github.com/LiGoldragon/signal-persona-origin.git" }
 signal-persona-message = { git = "https://github.com/LiGoldragon/signal-persona-message.git", branch = "main" }
 rkyv                = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 thiserror           = "2"

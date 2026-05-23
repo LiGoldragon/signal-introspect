@@ -2,7 +2,6 @@ use signal_core::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SignalVerb, SubReply,
 };
-use signal_persona_auth::{ComponentName, EngineId};
 use signal_persona_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
     DeliveryTraceEvent, DeliveryTraceKey, DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot,
@@ -10,6 +9,7 @@ use signal_persona_introspect::{
     IntrospectionFrameBody as FrameBody, IntrospectionReply, IntrospectionRequest,
     IntrospectionTarget, MessageIdentifier, PrototypeWitness, PrototypeWitnessQuery,
 };
+use signal_persona_origin::{ComponentName, EngineIdentifier};
 
 fn exchange() -> ExchangeIdentifier {
     ExchangeIdentifier::new(
@@ -70,7 +70,7 @@ fn round_trip_reply(reply: IntrospectionReply) -> IntrospectionReply {
 #[test]
 fn engine_snapshot_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
     });
     round_trip_request(request);
 }
@@ -78,7 +78,7 @@ fn engine_snapshot_query_round_trips_through_length_prefixed_frame() {
 #[test]
 fn component_snapshot_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
         target: IntrospectionTarget::Router,
     });
     round_trip_request(request);
@@ -87,7 +87,7 @@ fn component_snapshot_query_round_trips_through_length_prefixed_frame() {
 #[test]
 fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
         message_identifier: MessageIdentifier::new(7),
         originator: ComponentName::Message,
     });
@@ -97,7 +97,7 @@ fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
 #[test]
 fn prototype_witness_query_round_trips_as_match_request() {
     let request = IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
     });
     round_trip_request(request);
 }
@@ -106,19 +106,19 @@ fn prototype_witness_query_round_trips_as_match_request() {
 fn introspection_request_variants_are_read_shaped_match_operations() {
     let requests = [
         IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery {
-            engine: EngineId::new("prototype"),
+            engine: EngineIdentifier::new("prototype"),
         }),
         IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
-            engine: EngineId::new("prototype"),
+            engine: EngineIdentifier::new("prototype"),
             target: IntrospectionTarget::Router,
         }),
         IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
-            engine: EngineId::new("prototype"),
+            engine: EngineIdentifier::new("prototype"),
             message_identifier: MessageIdentifier::new(7),
             originator: ComponentName::Message,
         }),
         IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
-            engine: EngineId::new("prototype"),
+            engine: EngineIdentifier::new("prototype"),
         }),
     ];
 
@@ -130,7 +130,7 @@ fn introspection_request_variants_are_read_shaped_match_operations() {
 #[test]
 fn prototype_witness_reply_round_trips_through_length_prefixed_frame() {
     let reply = IntrospectionReply::PrototypeWitness(PrototypeWitness {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
         manager_seen: Some(ComponentReadiness::Ready),
         router_seen: Some(ComponentReadiness::Ready),
         terminal_seen: Some(ComponentReadiness::Ready),
@@ -146,7 +146,7 @@ fn prototype_witness_reply_round_trips_with_no_observations_yet() {
     // Option<>. Adding back an `Unknown` variant on either inner enum
     // would defeat the closed-enum integrity test below.
     let reply = IntrospectionReply::PrototypeWitness(PrototypeWitness {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
         manager_seen: None,
         router_seen: None,
         terminal_seen: None,
@@ -158,7 +158,7 @@ fn prototype_witness_reply_round_trips_with_no_observations_yet() {
 #[test]
 fn component_observations_are_wrapped_not_defined_here() {
     let engine_reply = IntrospectionReply::EngineSnapshot(EngineSnapshot {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
         observed_components: vec![
             IntrospectionTarget::EngineManager,
             IntrospectionTarget::Router,
@@ -166,17 +166,17 @@ fn component_observations_are_wrapped_not_defined_here() {
         ],
     });
     let component_reply = IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
         target: IntrospectionTarget::Router,
         readiness: Some(ComponentReadiness::Ready),
     });
     let trace_reply = IntrospectionReply::DeliveryTrace(DeliveryTrace {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
         message_identifier: MessageIdentifier::new(7),
         originator: ComponentName::Message,
         events: vec![DeliveryTraceEvent::new(
             DeliveryTraceKey::new(
-                EngineId::new("prototype"),
+                EngineIdentifier::new("prototype"),
                 MessageIdentifier::new(7),
                 ComponentName::Message,
                 HopIndex::new(1),
@@ -200,13 +200,13 @@ fn component_observations_are_wrapped_not_defined_here() {
 #[test]
 fn delivery_trace_key_round_trips_with_four_correlation_fields() {
     let trace_key = DeliveryTraceKey::new(
-        EngineId::new("prototype"),
+        EngineIdentifier::new("prototype"),
         MessageIdentifier::new(7),
         ComponentName::Message,
         HopIndex::new(3),
     );
     let reply = IntrospectionReply::DeliveryTrace(DeliveryTrace {
-        engine: EngineId::new("prototype"),
+        engine: EngineIdentifier::new("prototype"),
         message_identifier: MessageIdentifier::new(7),
         originator: ComponentName::Message,
         events: vec![DeliveryTraceEvent::new(
@@ -219,7 +219,10 @@ fn delivery_trace_key_round_trips_with_four_correlation_fields() {
     assert_eq!(round_trip_reply(reply.clone()), reply);
     assert_eq!(trace_key.hop_index.value(), 3);
     assert_eq!(trace_key.next_hop().hop_index.value(), 4);
-    assert_eq!(trace_key.join_key().engine, EngineId::new("prototype"));
+    assert_eq!(
+        trace_key.join_key().engine,
+        EngineIdentifier::new("prototype")
+    );
     assert_eq!(
         trace_key.join_key().message_identifier,
         MessageIdentifier::new(7)
@@ -263,8 +266,8 @@ fn introspection_status_enums_are_closed_no_unknown_variants() {
 fn introspect_daemon_configuration_round_trips_through_nota_text() {
     use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
     use signal_persona::{SocketMode, WirePath};
-    use signal_persona_auth::{OwnerIdentity, UnixUserId};
     use signal_persona_introspect::IntrospectDaemonConfiguration;
+    use signal_persona_origin::{OwnerIdentity, UnixUserId};
 
     let configuration = IntrospectDaemonConfiguration {
         introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),
@@ -294,8 +297,8 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
 fn introspect_daemon_configuration_round_trips_through_rkyv() {
     use nota_config::ConfigurationRecord;
     use signal_persona::{SocketMode, WirePath};
-    use signal_persona_auth::{OwnerIdentity, UnixUserId};
     use signal_persona_introspect::IntrospectDaemonConfiguration;
+    use signal_persona_origin::{OwnerIdentity, UnixUserId};
 
     let configuration = IntrospectDaemonConfiguration {
         introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),

@@ -10,8 +10,8 @@ use nota_codec::{NotaEnum, NotaRecord, NotaTransparent};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_core::signal_channel;
 use signal_persona::{SocketMode, WirePath};
-use signal_persona_auth::{ComponentName, EngineId, OwnerIdentity};
 pub use signal_persona_message::MessageSlot as MessageIdentifier;
+use signal_persona_origin::{ComponentName, EngineIdentifier, OwnerIdentity};
 
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -39,18 +39,18 @@ pub enum IntrospectionScope {
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct EngineSnapshotQuery {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
 }
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct ComponentSnapshotQuery {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
     pub target: IntrospectionTarget,
 }
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryTraceQuery {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
     pub message_identifier: MessageIdentifier,
     pub originator: ComponentName,
 }
@@ -67,12 +67,12 @@ impl DeliveryTraceQuery {
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct PrototypeWitnessQuery {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
 }
 
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct EngineSnapshot {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
     pub observed_components: Vec<IntrospectionTarget>,
 }
 
@@ -85,7 +85,7 @@ pub struct EngineSnapshot {
 /// §"Perfect specificity at boundaries."
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct ComponentSnapshot {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
     pub target: IntrospectionTarget,
     pub readiness: Option<ComponentReadiness>,
 }
@@ -133,14 +133,14 @@ impl HopIndex {
 /// inside the joined chain.
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryTraceJoinKey {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
     pub message_identifier: MessageIdentifier,
     pub originator: ComponentName,
 }
 
 impl DeliveryTraceJoinKey {
     pub fn new(
-        engine: EngineId,
+        engine: EngineIdentifier,
         message_identifier: MessageIdentifier,
         originator: ComponentName,
     ) -> Self {
@@ -161,7 +161,7 @@ impl DeliveryTraceJoinKey {
 /// delivery chain.
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryTraceKey {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
     pub message_identifier: MessageIdentifier,
     pub originator: ComponentName,
     pub hop_index: HopIndex,
@@ -169,7 +169,7 @@ pub struct DeliveryTraceKey {
 
 impl DeliveryTraceKey {
     pub fn new(
-        engine: EngineId,
+        engine: EngineIdentifier,
         message_identifier: MessageIdentifier,
         originator: ComponentName,
         hop_index: HopIndex,
@@ -234,7 +234,7 @@ impl DeliveryTraceEvent {
 /// event for the selected join key.
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct DeliveryTrace {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
     pub message_identifier: MessageIdentifier,
     pub originator: ComponentName,
     pub events: Vec<DeliveryTraceEvent>,
@@ -258,7 +258,7 @@ pub enum DeliveryTraceStatus {
 /// without polluting the closed inner enums.
 #[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
 pub struct PrototypeWitness {
-    pub engine: EngineId,
+    pub engine: EngineIdentifier,
     pub manager_seen: Option<ComponentReadiness>,
     pub router_seen: Option<ComponentReadiness>,
     pub terminal_seen: Option<ComponentReadiness>,
