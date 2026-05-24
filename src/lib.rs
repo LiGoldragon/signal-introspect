@@ -9,8 +9,8 @@
 use nota_codec::{NotaEnum, NotaRecord, NotaTransparent};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_core::signal_channel;
+pub use signal_message::MessageSlot as MessageIdentifier;
 use signal_persona::{SocketMode, WirePath};
-pub use signal_persona_message::MessageSlot as MessageIdentifier;
 use signal_persona_origin::{ComponentName, EngineIdentifier, OwnerIdentity};
 
 #[derive(

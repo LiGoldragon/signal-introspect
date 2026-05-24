@@ -267,7 +267,7 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
     use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
     use signal_introspect::IntrospectDaemonConfiguration;
     use signal_persona::{SocketMode, WirePath};
-    use signal_persona_origin::{OwnerIdentity, UnixUserId};
+    use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
 
     let configuration = IntrospectDaemonConfiguration {
         introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),
@@ -278,7 +278,7 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
         manager_socket_path: WirePath::new("/run/persona/X/persona.sock"),
         router_socket_path: WirePath::new("/run/persona/X/router.sock"),
         terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
-        owner_identity: OwnerIdentity::UnixUser(UnixUserId::new(1000)),
+        owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
     };
 
     let mut encoder = Encoder::new();
@@ -298,7 +298,7 @@ fn introspect_daemon_configuration_round_trips_through_rkyv() {
     use nota_config::ConfigurationRecord;
     use signal_introspect::IntrospectDaemonConfiguration;
     use signal_persona::{SocketMode, WirePath};
-    use signal_persona_origin::{OwnerIdentity, UnixUserId};
+    use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
 
     let configuration = IntrospectDaemonConfiguration {
         introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),
@@ -309,7 +309,7 @@ fn introspect_daemon_configuration_round_trips_through_rkyv() {
         manager_socket_path: WirePath::new("/run/persona/X/persona.sock"),
         router_socket_path: WirePath::new("/run/persona/X/router.sock"),
         terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
-        owner_identity: OwnerIdentity::UnixUser(UnixUserId::new(1000)),
+        owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
     };
 
     let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&configuration).expect("archive");
