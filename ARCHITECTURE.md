@@ -1,11 +1,11 @@
-# signal-persona-introspect — architecture
+# signal-introspect — architecture
 
 *Central Signal envelope contract for Persona introspection.*
 
 ## 0 · TL;DR
 
-`signal-persona-introspect` is the wrapper-and-selector contract a
-client uses to ask `persona-introspect` for an engine observation.
+`signal-introspect` is the wrapper-and-selector contract a
+client uses to ask `introspect` for an engine observation.
 It defines `IntrospectionRequest`, `IntrospectionReply`, the targets
 and scopes a query may name, and the typed roll-up records that
 project peer-component observations to a human-facing surface.
@@ -26,7 +26,7 @@ engine state) — with a closed payload enum naming the observation
 kind. Alternatively `Query` if the receiver context reads more
 naturally as querying.
 
-**Mandatory `Tap`/`Untap` for persona components.** Persona-introspect
+**Mandatory `Tap`/`Untap` for persona components.** Introspect
 is a persona component, so its observable surface is standardized.
 The macro-injected `Tap(ObserverFilter)` /
 `Untap(IntrospectObserverSubscriptionToken)` verbs are mandatory on
@@ -34,7 +34,7 @@ introspect's own ordinary socket via an `observable { … }` block —
 clients can subscribe to introspect's own operation/effect events
 just like any other persona component.
 
-**Subscriber side of the universal observer hook.** Persona-introspect
+**Subscriber side of the universal observer hook.** Introspect
 is the canonical *consumer* of every persona daemon's mandatory
 `Tap`/`Untap` surface. It opens subscriptions on each peer
 `signal-persona-*` ordinary socket, receives the standardized
@@ -44,7 +44,7 @@ client-side vocabulary for opening those subscriptions lives in each
 peer `signal-persona-*` contract (via the macro-injected `Tap` verb);
 this crate does not redefine them.
 
-**Layer 2 — Component Commands (persona-introspect daemon).** The
+**Layer 2 — Component Commands (introspect daemon).** The
 introspect daemon owns its typed Command enum (e.g.
 `IntrospectCommand::CollectEngineSnapshot`,
 `IntrospectCommand::CollectComponentSnapshot`,
@@ -86,7 +86,7 @@ carry an `Unknown` placeholder.
 | Side | Component |
 |---|---|
 | Request side | Introspection clients (CLIs, agent tooling). |
-| Reply side | `persona-introspect` |
+| Reply side | `introspect` |
 
 Today's surface is one-shot `Match` queries. Streaming subscription
 support (`SubscribeComponent`) lands when `sema-engine` per-peer
@@ -229,7 +229,7 @@ shadow code for a missing feature.
 
 ## 8 · Non-ownership
 
-- No introspection daemon — that is `persona-introspect`.
+- No introspection daemon — that is `introspect`.
 - No router tables, terminal session records, manager event-log
   rows, message ingress ledgers, harness lifecycle records.
 - No component databases, actors, sockets, reducers, or redaction
@@ -238,7 +238,7 @@ shadow code for a missing feature.
 Component-specific observation records start in the component
 contract that owns the state. This crate wraps; it does not define.
 Split to a sibling introspection contract
-(`signal-persona-<X>-introspect`) only when the observation
+(`signal-<X>-introspect`) only when the observation
 vocabulary becomes heavy or high-churn — per
 `~/primary/skills/contract-repo.md` §"Contracts name a component's
 wire surface".

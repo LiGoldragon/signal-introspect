@@ -1,4 +1,4 @@
-;; Canonical NOTA examples for signal-persona-introspect.
+;; Canonical NOTA examples for signal-introspect.
 ;;
 ;; One example per request variant followed by one example per reply
 ;; variant. Per the three-case PascalCase rule, each data-carrying

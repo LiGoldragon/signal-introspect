@@ -311,19 +311,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "signal-persona"
-version = "0.1.0"
-source = "git+https://github.com/LiGoldragon/signal-persona.git#eaaf681a84fa57b79c0aacfbcdb2647bd3e7408e"
-dependencies = [
- "nota-codec",
- "rkyv",
- "signal-frame",
- "signal-persona-origin",
- "signal-sema",
-]
-
-[[package]]
-name = "signal-persona-introspect"
+name = "signal-introspect"
 version = "0.1.0"
 dependencies = [
  "nota-codec",
@@ -334,6 +322,18 @@ dependencies = [
  "signal-persona-message",
  "signal-persona-origin",
  "thiserror",
+]
+
+[[package]]
+name = "signal-persona"
+version = "0.1.0"
+source = "git+https://github.com/LiGoldragon/signal-persona.git#eaaf681a84fa57b79c0aacfbcdb2647bd3e7408e"
+dependencies = [
+ "nota-codec",
+ "rkyv",
+ "signal-frame",
+ "signal-persona-origin",
+ "signal-sema",
 ]
 
 [[package]]

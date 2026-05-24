@@ -2,7 +2,7 @@ use signal_core::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SignalVerb, SubReply,
 };
-use signal_persona_introspect::{
+use signal_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
     DeliveryTraceEvent, DeliveryTraceKey, DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot,
     EngineSnapshotQuery, HopIndex, IntrospectionFrame as Frame,
@@ -265,8 +265,8 @@ fn introspection_status_enums_are_closed_no_unknown_variants() {
 #[test]
 fn introspect_daemon_configuration_round_trips_through_nota_text() {
     use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
+    use signal_introspect::IntrospectDaemonConfiguration;
     use signal_persona::{SocketMode, WirePath};
-    use signal_persona_introspect::IntrospectDaemonConfiguration;
     use signal_persona_origin::{OwnerIdentity, UnixUserId};
 
     let configuration = IntrospectDaemonConfiguration {
@@ -296,8 +296,8 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
 #[test]
 fn introspect_daemon_configuration_round_trips_through_rkyv() {
     use nota_config::ConfigurationRecord;
+    use signal_introspect::IntrospectDaemonConfiguration;
     use signal_persona::{SocketMode, WirePath};
-    use signal_persona_introspect::IntrospectDaemonConfiguration;
     use signal_persona_origin::{OwnerIdentity, UnixUserId};
 
     let configuration = IntrospectDaemonConfiguration {

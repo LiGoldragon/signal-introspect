@@ -1,15 +1,15 @@
 [package]
-name         = "signal-persona-introspect"
+name         = "signal-introspect"
 version      = "0.1.0"
 edition      = "2024"
 rust-version = "1.88"
 license      = "MIT OR Apache-2.0"
-repository   = "https://github.com/LiGoldragon/signal-persona-introspect"
+repository   = "https://github.com/LiGoldragon/signal-introspect"
 description  = "Signal contract for Persona introspection query and projection envelopes."
 publish      = false
 
 [lib]
-name = "signal_persona_introspect"
+name = "signal_introspect"
 path = "src/lib.rs"
 
 [dependencies]

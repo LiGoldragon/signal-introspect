@@ -8,7 +8,7 @@
 //! examples file aligned with the typed surface.
 
 use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
-use signal_persona_introspect::{
+use signal_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
     DeliveryTraceEvent, DeliveryTraceKey, DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot,
     EngineSnapshotQuery, HopIndex, IntrospectionDenied, IntrospectionDeniedReason,

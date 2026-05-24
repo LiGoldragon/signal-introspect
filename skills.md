@@ -1,4 +1,4 @@
-# skills — signal-persona-introspect
+# skills — signal-introspect
 
 *Per-repo agent guide for the central introspection envelope contract.*
 
@@ -16,15 +16,15 @@ Before changing code in this repo, read:
 - `~/primary/skills/nix-discipline.md`
 - this repo's `ARCHITECTURE.md`
 - the consumers' `ARCHITECTURE.md` files
-  (`persona-introspect/` and whichever component contract is being
+  (`introspect/` and whichever component contract is being
   wrapped).
 
 ---
 
 ## What this repo is for
 
-`signal-persona-introspect` is the wrapper-and-selector contract a
-client uses to ask `persona-introspect` for an engine observation.
+`signal-introspect` is the wrapper-and-selector contract a
+client uses to ask `introspect` for an engine observation.
 It carries:
 
 - the request/reply envelope (`IntrospectionRequest` /

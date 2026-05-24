@@ -316,14 +316,14 @@ signal_channel! {
 
 // ─── Daemon configuration ──────────────────────────────────
 //
-// Typed startup configuration for `persona-introspect-daemon`.
+// Typed startup configuration for `introspect-daemon`.
 // The persona manager writes one of these (NOTA or rkyv) to a
 // state-dir path and passes that path as argv. The daemon decodes
 // through `nota_config::ConfigurationSource::from_argv()?.decode()?`
 // and runs with the resulting record. No environment variables on
 // the production launch path.
 
-/// Startup configuration for `persona-introspect-daemon`.
+/// Startup configuration for `introspect-daemon`.
 ///
 /// Replaces the previous `PERSONA_INTROSPECT_SOCKET`,
 /// `PERSONA_SOCKET_PATH`, `PERSONA_SOCKET_MODE`,

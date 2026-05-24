@@ -1,4 +1,4 @@
-# signal-persona-introspect
+# signal-introspect
 
 Central Signal envelope contract for Persona introspection.
 

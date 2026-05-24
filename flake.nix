@@ -1,5 +1,5 @@
 {
-  description = "signal-persona-introspect - Signal contract for Persona introspection envelopes";
+  description = "signal-introspect - Signal contract for Persona introspection envelopes";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -52,7 +52,7 @@
           });
         };
         devShells.default = pkgs.mkShell {
-          name = "signal-persona-introspect";
+          name = "signal-introspect";
           packages = [ pkgs.jujutsu pkgs.pkg-config toolchain ];
         };
       });
