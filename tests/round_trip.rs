@@ -245,9 +245,9 @@ fn introspection_status_enums_are_closed_no_unknown_variants() {
 
 #[test]
 fn introspect_daemon_configuration_round_trips_through_nota_text() {
-    use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
+    use nota_next::{NotaEncode, NotaSource};
+    use signal_engine_management::{SocketMode, WirePath};
     use signal_introspect::IntrospectDaemonConfiguration;
-    use signal_persona::{SocketMode, WirePath};
     use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
 
     let configuration = IntrospectDaemonConfiguration {
@@ -262,23 +262,19 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
         owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
     };
 
-    let mut encoder = Encoder::new();
-    configuration
-        .encode(&mut encoder)
-        .expect("encode configuration");
-    let text = encoder.into_string();
-    let mut decoder = Decoder::new(&text);
-    let recovered =
-        IntrospectDaemonConfiguration::decode(&mut decoder).expect("decode configuration");
+    let text = configuration.to_nota();
+    let recovered = NotaSource::new(&text)
+        .parse::<IntrospectDaemonConfiguration>()
+        .expect("decode configuration");
 
     assert_eq!(recovered, configuration);
+    assert!(text.contains("[/run/persona/X/introspect.sock]"));
 }
 
 #[test]
 fn introspect_daemon_configuration_round_trips_through_rkyv() {
-    use nota_config::ConfigurationRecord;
+    use signal_engine_management::{SocketMode, WirePath};
     use signal_introspect::IntrospectDaemonConfiguration;
-    use signal_persona::{SocketMode, WirePath};
     use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
 
     let configuration = IntrospectDaemonConfiguration {
@@ -293,7 +289,7 @@ fn introspect_daemon_configuration_round_trips_through_rkyv() {
         owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
     };
 
-    let bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&configuration).expect("archive");
+    let bytes = configuration.to_rkyv_bytes().expect("archive");
     let recovered = IntrospectDaemonConfiguration::from_rkyv_bytes(&bytes).expect("decode rkyv");
     assert_eq!(recovered, configuration);
 }

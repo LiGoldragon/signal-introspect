@@ -13,14 +13,13 @@ name = "signal_introspect"
 path = "src/lib.rs"
 
 [dependencies]
-nota-codec          = { git = "https://github.com/LiGoldragon/nota-codec.git", branch = "main" }
-nota-config         = { git = "https://github.com/LiGoldragon/nota-config.git", branch = "main" }
-signal-frame        = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
-signal-persona      = { git = "https://github.com/LiGoldragon/signal-persona.git" }
-signal-persona-origin = { git = "https://github.com/LiGoldragon/signal-persona-origin.git" }
-signal-message = { git = "https://github.com/LiGoldragon/signal-message.git", branch = "main" }
-rkyv                = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-thiserror           = "2"
+nota-next                = { git = "https://github.com/LiGoldragon/nota-next.git", branch = "main" }
+signal-frame             = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
+signal-engine-management = { git = "https://github.com/LiGoldragon/signal-engine-management.git", branch = "main" }
+signal-persona-origin    = { git = "https://github.com/LiGoldragon/signal-persona-origin.git", branch = "main" }
+signal-message           = { git = "https://github.com/LiGoldragon/signal-message.git", branch = "main" }
+rkyv                     = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
+thiserror                = "2"
 
 [lints.rust]
 unsafe_code = "forbid"

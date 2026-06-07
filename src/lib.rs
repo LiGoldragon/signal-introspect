@@ -2,19 +2,29 @@
 //!
 //! This crate asks and wraps observations. Component-owned observation
 //! records live in the component contract that owns the observed state
-//! (`signal-persona`, `signal-persona-terminal`,
-//! `signal-persona-router`, etc.). This crate must not become a bucket
+//! (`signal-engine-management`, `signal-terminal`,
+//! `signal-router`, etc.). This crate must not become a bucket
 //! for every component's internal rows.
 
-use nota_codec::{NotaEnum, NotaRecord, NotaTransparent};
+use nota_next::{Block, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
+use signal_engine_management::{SocketMode, WirePath};
 use signal_frame::signal_channel;
 pub use signal_message::MessageSlot as MessageIdentifier;
-use signal_persona::{SocketMode, WirePath};
 use signal_persona_origin::{ComponentName, EngineIdentifier, OwnerIdentity};
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub enum IntrospectionTarget {
     EngineManager,
@@ -28,7 +38,17 @@ pub enum IntrospectionTarget {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub enum IntrospectionScope {
     EngineSnapshot,
@@ -37,18 +57,24 @@ pub enum IntrospectionScope {
     PrototypeWitness,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct EngineSnapshotQuery {
     pub engine: EngineIdentifier,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct ComponentSnapshotQuery {
     pub engine: EngineIdentifier,
     pub target: IntrospectionTarget,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct DeliveryTraceQuery {
     pub engine: EngineIdentifier,
     pub message_identifier: MessageIdentifier,
@@ -65,12 +91,16 @@ impl DeliveryTraceQuery {
     }
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct PrototypeWitnessQuery {
     pub engine: EngineIdentifier,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct EngineSnapshot {
     pub engine: EngineIdentifier,
     pub observed_components: Vec<IntrospectionTarget>,
@@ -83,7 +113,9 @@ pub struct EngineSnapshot {
 /// The `Option<>` carries the "not yet observed" axis so
 /// `ComponentReadiness` itself stays closed per ESSENCE
 /// §"Perfect specificity at boundaries."
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct ComponentSnapshot {
     pub engine: EngineIdentifier,
     pub target: IntrospectionTarget,
@@ -91,7 +123,17 @@ pub struct ComponentSnapshot {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub enum ComponentReadiness {
     Ready,
@@ -102,7 +144,6 @@ pub enum ComponentReadiness {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaTransparent,
     Debug,
     Clone,
     Copy,
@@ -128,10 +169,28 @@ impl HopIndex {
     }
 }
 
+impl NotaDecode for HopIndex {
+    fn from_nota_block(block: &Block) -> Result<Self, NotaDecodeError> {
+        let value = NotaBlock::new(block).parse_integer()?;
+        let index = u32::try_from(value).map_err(|_| NotaDecodeError::InvalidInteger {
+            value: value.to_string(),
+        })?;
+        Ok(Self(index))
+    }
+}
+
+impl NotaEncode for HopIndex {
+    fn to_nota(&self) -> String {
+        self.0.to_string()
+    }
+}
+
 /// Join portion of [`DeliveryTraceKey`]. All hops for one delivery
 /// share this value; `DeliveryTraceKey.hop_index` orders the events
 /// inside the joined chain.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct DeliveryTraceJoinKey {
     pub engine: EngineIdentifier,
     pub message_identifier: MessageIdentifier,
@@ -159,7 +218,9 @@ impl DeliveryTraceJoinKey {
 /// Cross-component delivery correlation key. The first three fields are
 /// the join key; `hop_index` is the deterministic order key inside one
 /// delivery chain.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct DeliveryTraceKey {
     pub engine: EngineIdentifier,
     pub message_identifier: MessageIdentifier,
@@ -204,7 +265,9 @@ impl DeliveryTraceKey {
     }
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct DeliveryTraceEvent {
     pub key: DeliveryTraceKey,
     pub component: ComponentName,
@@ -232,7 +295,9 @@ impl DeliveryTraceEvent {
 /// Hop-ordered delivery observations for one message chain. An empty
 /// `events` vector means the introspect daemon has not yet seen any Tap
 /// event for the selected join key.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct DeliveryTrace {
     pub engine: EngineIdentifier,
     pub message_identifier: MessageIdentifier,
@@ -241,7 +306,17 @@ pub struct DeliveryTrace {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub enum DeliveryTraceStatus {
     Accepted,
@@ -256,7 +331,9 @@ pub enum DeliveryTraceStatus {
 /// means "the introspect daemon has not yet collected an observation
 /// from that peer in this engine," distinguishable from observed states
 /// without polluting the closed inner enums.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct PrototypeWitness {
     pub engine: EngineIdentifier,
     pub manager_seen: Option<ComponentReadiness>,
@@ -265,14 +342,26 @@ pub struct PrototypeWitness {
     pub delivery_status: Option<DeliveryTraceStatus>,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct IntrospectionUnimplemented {
     pub scope: IntrospectionScope,
     pub reason: IntrospectionUnimplementedReason,
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub enum IntrospectionUnimplementedReason {
     NotInPrototypeScope,
@@ -280,14 +369,26 @@ pub enum IntrospectionUnimplementedReason {
     SubscriptionNotImplemented,
 }
 
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct IntrospectionDenied {
     pub scope: IntrospectionScope,
     pub reason: IntrospectionDeniedReason,
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEnum, Debug, Clone, Copy, PartialEq, Eq, Hash,
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
 )]
 pub enum IntrospectionDeniedReason {
     NotAuthorized,
@@ -333,7 +434,9 @@ pub type IntrospectionRequestBuilder = RequestBuilder;
 /// `PERSONA_MANAGER_SOCKET_PATH`, and the
 /// `PERSONA_PEER_*` peer-socket enumeration environment-variable
 /// surface.
-#[derive(Archive, RkyvSerialize, RkyvDeserialize, NotaRecord, Debug, Clone, PartialEq, Eq)]
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
 pub struct IntrospectDaemonConfiguration {
     /// Where the daemon binds its introspection-query Unix socket.
     pub introspect_socket_path: WirePath,
@@ -355,4 +458,25 @@ pub struct IntrospectDaemonConfiguration {
     pub owner_identity: OwnerIdentity,
 }
 
-nota_config::impl_rkyv_configuration!(IntrospectDaemonConfiguration);
+impl IntrospectDaemonConfiguration {
+    pub fn from_rkyv_bytes(
+        bytes: &[u8],
+    ) -> Result<Self, IntrospectDaemonConfigurationArchiveError> {
+        rkyv::from_bytes::<Self, rkyv::rancor::Error>(bytes)
+            .map_err(|_| IntrospectDaemonConfigurationArchiveError::Decode)
+    }
+
+    pub fn to_rkyv_bytes(&self) -> Result<Vec<u8>, IntrospectDaemonConfigurationArchiveError> {
+        rkyv::to_bytes::<rkyv::rancor::Error>(self)
+            .map(|bytes| bytes.to_vec())
+            .map_err(|_| IntrospectDaemonConfigurationArchiveError::Encode)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum IntrospectDaemonConfigurationArchiveError {
+    #[error("failed to encode introspect daemon configuration archive")]
+    Encode,
+    #[error("failed to decode introspect daemon configuration archive")]
+    Decode,
+}

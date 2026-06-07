@@ -7,7 +7,7 @@
 //! matching expected value here; the witness is what keeps the
 //! examples file aligned with the typed surface.
 
-use nota_codec::{Decoder, Encoder, NotaDecode, NotaEncode};
+use nota_next::{NotaEncode, NotaSource};
 use signal_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
     DeliveryTraceEvent, DeliveryTraceKey, DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot,
@@ -29,14 +29,14 @@ fn canonical_request_examples_round_trip() {
     let expected: Vec<(IntrospectionRequest, &str)> = vec![
         (
             IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery { engine: engine() }),
-            "(EngineSnapshot (prototype))",
+            "(EngineSnapshot ([prototype]))",
         ),
         (
             IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
                 engine: engine(),
                 target: IntrospectionTarget::Router,
             }),
-            "(ComponentSnapshot (prototype Router))",
+            "(ComponentSnapshot ([prototype] Router))",
         ),
         (
             IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
@@ -44,22 +44,21 @@ fn canonical_request_examples_round_trip() {
                 message_identifier: MessageIdentifier::new(7),
                 originator: ComponentName::Message,
             }),
-            "(DeliveryTrace (prototype 7 Message))",
+            "(DeliveryTrace ([prototype] 7 Message))",
         ),
         (
             IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { engine: engine() }),
-            "(PrototypeWitness (prototype))",
+            "(PrototypeWitness ([prototype]))",
         ),
     ];
 
     for (value, canonical_text) in expected {
-        let mut encoder = Encoder::new();
-        value.encode(&mut encoder).expect("encode");
-        let text = encoder.into_string();
+        let text = value.to_nota();
         assert_eq!(text, canonical_text, "encode for {value:?}");
 
-        let mut decoder = Decoder::new(canonical_text);
-        let decoded = IntrospectionRequest::decode(&mut decoder).expect("decode");
+        let decoded = NotaSource::new(canonical_text)
+            .parse::<IntrospectionRequest>()
+            .expect("decode");
         assert_eq!(decoded, value, "decode for {canonical_text}");
 
         assert!(
@@ -80,7 +79,7 @@ fn canonical_reply_examples_round_trip() {
                     IntrospectionTarget::Terminal,
                 ],
             }),
-            "(EngineSnapshot (prototype [Router Terminal]))",
+            "(EngineSnapshot ([prototype] [Router Terminal]))",
         ),
         (
             IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
@@ -88,7 +87,7 @@ fn canonical_reply_examples_round_trip() {
                 target: IntrospectionTarget::Router,
                 readiness: Some(ComponentReadiness::Ready),
             }),
-            "(ComponentSnapshot (prototype Router (Some Ready)))",
+            "(ComponentSnapshot ([prototype] Router (Some Ready)))",
         ),
         (
             IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
@@ -96,7 +95,7 @@ fn canonical_reply_examples_round_trip() {
                 target: IntrospectionTarget::Router,
                 readiness: None,
             }),
-            "(ComponentSnapshot (prototype Router None))",
+            "(ComponentSnapshot ([prototype] Router None))",
         ),
         (
             IntrospectionReply::DeliveryTrace(DeliveryTrace {
@@ -114,7 +113,7 @@ fn canonical_reply_examples_round_trip() {
                     DeliveryTraceStatus::Routed,
                 )],
             }),
-            "(DeliveryTrace (prototype 7 Message [((prototype 7 Message 1) Router Routed)]))",
+            "(DeliveryTrace ([prototype] 7 Message [(([prototype] 7 Message 1) Router Routed)]))",
         ),
         (
             IntrospectionReply::DeliveryTrace(DeliveryTrace {
@@ -123,7 +122,7 @@ fn canonical_reply_examples_round_trip() {
                 originator: ComponentName::Message,
                 events: Vec::new(),
             }),
-            "(DeliveryTrace (prototype 7 Message []))",
+            "(DeliveryTrace ([prototype] 7 Message []))",
         ),
         (
             IntrospectionReply::PrototypeWitness(PrototypeWitness {
@@ -133,7 +132,7 @@ fn canonical_reply_examples_round_trip() {
                 terminal_seen: Some(ComponentReadiness::Ready),
                 delivery_status: Some(DeliveryTraceStatus::Routed),
             }),
-            "(PrototypeWitness (prototype (Some Ready) (Some Ready) (Some Ready) (Some Routed)))",
+            "(PrototypeWitness ([prototype] (Some Ready) (Some Ready) (Some Ready) (Some Routed)))",
         ),
         (
             IntrospectionReply::PrototypeWitness(PrototypeWitness {
@@ -143,7 +142,7 @@ fn canonical_reply_examples_round_trip() {
                 terminal_seen: None,
                 delivery_status: None,
             }),
-            "(PrototypeWitness (prototype None None None None))",
+            "(PrototypeWitness ([prototype] None None None None))",
         ),
         (
             IntrospectionReply::Unimplemented(IntrospectionUnimplemented {
@@ -162,13 +161,12 @@ fn canonical_reply_examples_round_trip() {
     ];
 
     for (value, canonical_text) in expected {
-        let mut encoder = Encoder::new();
-        value.encode(&mut encoder).expect("encode");
-        let text = encoder.into_string();
+        let text = value.to_nota();
         assert_eq!(text, canonical_text, "encode for {value:?}");
 
-        let mut decoder = Decoder::new(canonical_text);
-        let decoded = IntrospectionReply::decode(&mut decoder).expect("decode");
+        let decoded = NotaSource::new(canonical_text)
+            .parse::<IntrospectionReply>()
+            .expect("decode");
         assert_eq!(decoded, value, "decode for {canonical_text}");
 
         assert!(
