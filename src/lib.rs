@@ -8,7 +8,7 @@
 
 use nota_codec::{NotaEnum, NotaRecord, NotaTransparent};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use signal_core::signal_channel;
+use signal_frame::signal_channel;
 pub use signal_message::MessageSlot as MessageIdentifier;
 use signal_persona::{SocketMode, WirePath};
 use signal_persona_origin::{ComponentName, EngineIdentifier, OwnerIdentity};
@@ -296,32 +296,32 @@ pub enum IntrospectionDeniedReason {
 
 signal_channel! {
     channel Introspection {
-        request IntrospectionRequest {
-            Match EngineSnapshot(EngineSnapshotQuery),
-            Match ComponentSnapshot(ComponentSnapshotQuery),
-            Match DeliveryTrace(DeliveryTraceQuery),
-            Match PrototypeWitness(PrototypeWitnessQuery),
-        }
-
-        reply IntrospectionReply {
-            EngineSnapshot(EngineSnapshot),
-            ComponentSnapshot(ComponentSnapshot),
-            DeliveryTrace(DeliveryTrace),
-            PrototypeWitness(PrototypeWitness),
-            Unimplemented(IntrospectionUnimplemented),
-            Denied(IntrospectionDenied),
-        }
+        operation EngineSnapshot(EngineSnapshotQuery),
+        operation ComponentSnapshot(ComponentSnapshotQuery),
+        operation DeliveryTrace(DeliveryTraceQuery),
+        operation PrototypeWitness(PrototypeWitnessQuery),
+    }
+    reply IntrospectionReply {
+        EngineSnapshot(EngineSnapshot),
+        ComponentSnapshot(ComponentSnapshot),
+        DeliveryTrace(DeliveryTrace),
+        PrototypeWitness(PrototypeWitness),
+        Unimplemented(IntrospectionUnimplemented),
+        Denied(IntrospectionDenied),
     }
 }
+
+pub type IntrospectionRequest = Operation;
+pub type IntrospectionFrame = Frame;
+pub type IntrospectionFrameBody = FrameBody;
+pub type IntrospectionRequestBuilder = RequestBuilder;
 
 // ─── Daemon configuration ──────────────────────────────────
 //
 // Typed startup configuration for `introspect-daemon`.
-// The persona manager writes one of these (NOTA or rkyv) to a
-// state-dir path and passes that path as argv. The daemon decodes
-// through `nota_config::ConfigurationSource::from_argv()?.decode()?`
-// and runs with the resulting record. No environment variables on
-// the production launch path.
+// Human tooling may author this record through NOTA, but the live
+// daemon consumes a signal-encoded rkyv archive path. The daemon does
+// not parse NOTA.
 
 /// Startup configuration for `introspect-daemon`.
 ///
@@ -343,7 +343,7 @@ pub struct IntrospectDaemonConfiguration {
     pub supervision_socket_path: WirePath,
     /// chmod applied to the supervision socket after bind.
     pub supervision_socket_mode: SocketMode,
-    /// Path to the introspect daemon's redb store file.
+    /// Path to the introspect daemon's sema-engine store file.
     pub store_path: WirePath,
     /// Engine manager's supervision socket (peer).
     pub manager_socket_path: WirePath,

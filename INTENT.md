@@ -20,8 +20,8 @@ scopes a query may name, and the typed roll-up records that project peer-compone
 observations to a human-facing surface. It asks and wraps; the component-specific
 observation row types stay in their own owning component contracts (e.g.
 `signal-router`), so this crate never becomes a shared schema bucket. Runtime
-actors, the redb store, peer-subscription fan-out, and projection logic live in
-`introspect`.
+actors, the sema-engine store, peer-subscription fan-out, and projection logic
+live in `introspect`.
 
 ## The channel shape
 
@@ -61,16 +61,14 @@ operation verbs":
 - Payload record names are the domain nouns the operation carries
   (`EngineSnapshot`, `ComponentSnapshot`, `DeliveryTrace`, `PrototypeWitness`),
   not `Request`, `Data`, or generic containers.
-- The legacy `Match`-tagged request variants still present in `src/lib.rs` are
-  a cleanup-track holdover (per `primary/skills/contract-repo.md` §"What moved
-  below the public contract") — Sema class words are forbidden on the public
-  wire; the migration to bare contract-local verbs is owed, not optional.
+- The public request roots are the contract-local operation heads declared in
+  `src/lib.rs`; Sema class words are forbidden on the public wire.
 
 ## Constraints
 
 - This crate carries only typed wire vocabulary, NOTA codecs, and round-trip
   witnesses.
-- No runtime code: no actors, no tokio, no socket binding, no redb, no
+- No runtime code: no actors, no tokio, no socket binding, no storage, no
   aggregation logic.
 - Contract types derive NOTA in this crate. Consumers do not carry shadow types
   that re-derive the text surface.
@@ -107,7 +105,7 @@ tests/round_trip.rs                  — rkyv frame and NOTA round-trip witnesse
 This crate does not own:
 
 - `introspect` daemon runtime, actors, or component lifecycle;
-- the introspect redb store or any storage tables;
+- the introspect sema-engine store or any storage tables;
 - socket binding, transport, peer-subscription fan-out, or version handshake;
 - aggregation, projection, or observation-collection logic;
 - the component-specific observation row types that each peer contract owns;

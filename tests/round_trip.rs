@@ -1,6 +1,6 @@
-use signal_core::{
+use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
-    SignalVerb, SubReply,
+    SignalOperationHeads, SubReply,
 };
 use signal_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
@@ -20,7 +20,6 @@ fn exchange() -> ExchangeIdentifier {
 }
 
 fn round_trip_request(request: IntrospectionRequest) {
-    let expected_verb = request.signal_verb();
     let frame = Frame::new(FrameBody::Request {
         exchange: exchange(),
         request: request.clone().into_request(),
@@ -34,22 +33,16 @@ fn round_trip_request(request: IntrospectionRequest) {
             request: decoded_request,
             ..
         } => {
-            let operation = decoded_request.operations().head();
-            assert_eq!(operation.verb, expected_verb);
-            assert_eq!(operation.verb, SignalVerb::Match);
-            assert_eq!(operation.payload, request);
+            assert_eq!(decoded_request.payloads().head(), &request);
         }
-        other => panic!("expected Match request, got {other:?}"),
+        other => panic!("expected introspection request, got {other:?}"),
     }
 }
 
 fn round_trip_reply(reply: IntrospectionReply) -> IntrospectionReply {
     let frame = Frame::new(FrameBody::Reply {
         exchange: exchange(),
-        reply: Reply::completed(NonEmpty::single(SubReply::Ok {
-            verb: SignalVerb::Match,
-            payload: reply,
-        })),
+        reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply))),
     });
 
     let bytes = frame.encode_length_prefixed().expect("encode");
@@ -58,7 +51,7 @@ fn round_trip_reply(reply: IntrospectionReply) -> IntrospectionReply {
     match decoded.into_body() {
         FrameBody::Reply { reply, .. } => match reply {
             Reply::Accepted { per_operation, .. } => match per_operation.into_head() {
-                SubReply::Ok { payload, .. } => payload,
+                SubReply::Ok(payload) => payload,
                 other => panic!("expected accepted reply payload, got {other:?}"),
             },
             other => panic!("expected accepted reply, got {other:?}"),
@@ -95,7 +88,7 @@ fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
 }
 
 #[test]
-fn prototype_witness_query_round_trips_as_match_request() {
+fn prototype_witness_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
         engine: EngineIdentifier::new("prototype"),
     });
@@ -103,28 +96,16 @@ fn prototype_witness_query_round_trips_as_match_request() {
 }
 
 #[test]
-fn introspection_request_variants_are_read_shaped_match_operations() {
-    let requests = [
-        IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery {
-            engine: EngineIdentifier::new("prototype"),
-        }),
-        IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
-            engine: EngineIdentifier::new("prototype"),
-            target: IntrospectionTarget::Router,
-        }),
-        IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
-            engine: EngineIdentifier::new("prototype"),
-            message_identifier: MessageIdentifier::new(7),
-            originator: ComponentName::Message,
-        }),
-        IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
-            engine: EngineIdentifier::new("prototype"),
-        }),
-    ];
-
-    for request in requests {
-        assert_eq!(request.signal_verb(), SignalVerb::Match);
-    }
+fn introspection_request_heads_are_contract_local_operations() {
+    assert_eq!(
+        <IntrospectionRequest as SignalOperationHeads>::HEADS,
+        &[
+            "EngineSnapshot",
+            "ComponentSnapshot",
+            "DeliveryTrace",
+            "PrototypeWitness",
+        ]
+    );
 }
 
 #[test]
@@ -274,7 +255,7 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
         introspect_socket_mode: SocketMode::new(0o600),
         supervision_socket_path: WirePath::new("/run/persona/X/introspect-supervision.sock"),
         supervision_socket_mode: SocketMode::new(0o600),
-        store_path: WirePath::new("/var/lib/persona/X/introspect.redb"),
+        store_path: WirePath::new("/var/lib/persona/X/introspect.sema"),
         manager_socket_path: WirePath::new("/run/persona/X/persona.sock"),
         router_socket_path: WirePath::new("/run/persona/X/router.sock"),
         terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
@@ -305,7 +286,7 @@ fn introspect_daemon_configuration_round_trips_through_rkyv() {
         introspect_socket_mode: SocketMode::new(0o600),
         supervision_socket_path: WirePath::new("/run/persona/X/introspect-supervision.sock"),
         supervision_socket_mode: SocketMode::new(0o600),
-        store_path: WirePath::new("/var/lib/persona/X/introspect.redb"),
+        store_path: WirePath::new("/var/lib/persona/X/introspect.sema"),
         manager_socket_path: WirePath::new("/run/persona/X/persona.sock"),
         router_socket_path: WirePath::new("/run/persona/X/router.sock"),
         terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),

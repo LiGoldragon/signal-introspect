@@ -2,8 +2,6 @@
 
 *Per-repo agent guide for the central introspection envelope contract.*
 
----
-
 ## Checkpoint — read before editing
 
 Before changing code in this repo, read:
@@ -18,8 +16,6 @@ Before changing code in this repo, read:
 - the consumers' `ARCHITECTURE.md` files
   (`introspect/` and whichever component contract is being
   wrapped).
-
----
 
 ## What this repo is for
 
@@ -39,28 +35,24 @@ records start in the component contract that owns the state
 (`signal-persona-terminal`, `signal-persona-router`, etc.). This
 crate wraps; it does not redefine.
 
----
-
 ## What this repo owns
 
 - The central introspection request/reply envelope.
 - Query selectors, projection wrappers, and future subscription
   handles.
-- Frame aliases over `signal_core::Frame<IntrospectionRequest,
+- Frame aliases over `signal_frame::Frame<IntrospectionRequest,
   IntrospectionReply>`.
 
 ## What this repo does not own
 
 - Router, terminal, manager, harness, message, system, or mind row
   types.
-- Daemon code, Kameo actors, sockets, redb access, or projection
+- Daemon code, Kameo actors, sockets, storage access, or projection
   policy.
 - A shared schema bucket for every component.
 
 Component observation records live in the component contract that
 owns the observed state. This crate asks and wraps.
-
----
 
 ## Load-bearing invariants
 
@@ -76,15 +68,14 @@ owns the observed state. This crate asks and wraps.
   `(engine, message_identifier, originator, hop_index)`. The first
   three fields join one delivery chain; `hop_index` orders events
   without clock sorting.
-- **Every request variant declares a Signal root verb.** The
-  `signal_channel!` declaration is the source of truth; the macro
-  generates `IntrospectionRequest::signal_verb()` and round-trip
-  tests assert every variant. Today every variant is `Match`.
+- **Every request variant declares a contract-local operation head.**
+  The `signal_channel!` declaration is the source of truth; tests
+  assert the exact heads.
 - **The contract asks and wraps; it does not define component rows.**
   When a peer-component observation lands, the row vocabulary lives
   in the component's own contract crate; this crate wraps via
   `ComponentObservationResult` and similar wrapper enums.
-- **No runtime code.** No Kameo, Tokio, socket, redb, or daemon glue
+- **No runtime code.** No Kameo, Tokio, socket, storage, or daemon glue
   in this crate.
 - **Round trips cover every variant.** rkyv length-prefixed frame
   round trips in `tests/round_trip.rs`; canonical NOTA examples in
@@ -92,8 +83,6 @@ owns the observed state. This crate asks and wraps.
 - **Pin upstream contracts via a named API reference.** Cargo deps
   declare `git = "..."` with a named branch/bookmark, never raw
   `rev = "..."`.
-
----
 
 ## Editing patterns
 
@@ -105,8 +94,8 @@ owns the observed state. This crate asks and wraps.
 2. If it lives here: write the canonical NOTA example for the
    request and the expected reply in `examples/canonical.nota`.
 3. Declare the payload and reply variant in `src/lib.rs`.
-4. Add the variant to the `signal_channel!` declaration with its
-   root verb (`Match` today).
+4. Add the variant to the `signal_channel!` declaration as a
+   contract-local operation head.
 5. Add the rkyv and NOTA round-trip witnesses.
 6. Update `ARCHITECTURE.md`.
 
@@ -147,18 +136,13 @@ Do not add an `Unimplemented`-stub `SubscribeComponent` variant in
 the meantime — consumers would write shadow code against a
 non-functional feature.
 
----
-
-## NOTA codec quirk
+## NOTA codec shape
 
 The `signal_channel!` macro emits a request variant's NOTA head as
-the **payload's record head**, not the Rust variant name. For
+the operation head. For
 example, `IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { .. })`
-encodes as `(PrototypeWitnessQuery (...))`, not
-`(PrototypeWitness (...))`. Canonical examples and round-trip tests
-use the payload heads.
-
----
+encodes as `(PrototypeWitness (...))`. Canonical examples and
+round-trip tests use the operation heads.
 
 ## See also
 
