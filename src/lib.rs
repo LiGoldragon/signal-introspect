@@ -2,16 +2,16 @@
 //!
 //! This crate asks and wraps observations. Component-owned observation
 //! records live in the component contract that owns the observed state
-//! (`signal-engine-management`, `signal-terminal`,
+//! (`signal-persona`, `signal-terminal`,
 //! `signal-router`, etc.). This crate must not become a bucket
 //! for every component's internal rows.
 
 use nota_next::{Block, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use signal_engine_management::{SocketMode, WirePath};
 use signal_frame::signal_channel;
 pub use signal_message::MessageSlot as MessageIdentifier;
-use signal_persona_origin::{ComponentName, EngineIdentifier, OwnerIdentity};
+use signal_persona::origin::{ComponentName, EngineIdentifier, OwnerIdentity};
+use signal_persona::{SocketMode, WirePath};
 
 #[derive(
     Archive,
@@ -85,7 +85,7 @@ impl DeliveryTraceQuery {
     pub fn join_key(&self) -> DeliveryTraceJoinKey {
         DeliveryTraceJoinKey::new(
             self.engine.clone(),
-            self.message_identifier,
+            self.message_identifier.clone(),
             self.originator,
         )
     }
@@ -250,7 +250,7 @@ impl DeliveryTraceKey {
     pub fn join_key(&self) -> DeliveryTraceJoinKey {
         DeliveryTraceJoinKey::new(
             self.engine.clone(),
-            self.message_identifier,
+            self.message_identifier.clone(),
             self.originator,
         )
     }
@@ -258,7 +258,7 @@ impl DeliveryTraceKey {
     pub fn next_hop(&self) -> Self {
         Self::new(
             self.engine.clone(),
-            self.message_identifier,
+            self.message_identifier.clone(),
             self.originator,
             self.hop_index.next(),
         )

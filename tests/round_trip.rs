@@ -9,7 +9,7 @@ use signal_introspect::{
     IntrospectionFrameBody as FrameBody, IntrospectionReply, IntrospectionRequest,
     IntrospectionTarget, MessageIdentifier, PrototypeWitness, PrototypeWitnessQuery,
 };
-use signal_persona_origin::{ComponentName, EngineIdentifier};
+use signal_persona::origin::{ComponentName, EngineIdentifier};
 
 fn exchange() -> ExchangeIdentifier {
     ExchangeIdentifier::new(
@@ -246,9 +246,9 @@ fn introspection_status_enums_are_closed_no_unknown_variants() {
 #[test]
 fn introspect_daemon_configuration_round_trips_through_nota_text() {
     use nota_next::{NotaEncode, NotaSource};
-    use signal_engine_management::{SocketMode, WirePath};
     use signal_introspect::IntrospectDaemonConfiguration;
-    use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
+    use signal_persona::origin::{OwnerIdentity, UnixUserIdentifier};
+    use signal_persona::{SocketMode, WirePath};
 
     let configuration = IntrospectDaemonConfiguration {
         introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),
@@ -273,9 +273,9 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
 
 #[test]
 fn introspect_daemon_configuration_round_trips_through_rkyv() {
-    use signal_engine_management::{SocketMode, WirePath};
     use signal_introspect::IntrospectDaemonConfiguration;
-    use signal_persona_origin::{OwnerIdentity, UnixUserIdentifier};
+    use signal_persona::origin::{OwnerIdentity, UnixUserIdentifier};
+    use signal_persona::{SocketMode, WirePath};
 
     let configuration = IntrospectDaemonConfiguration {
         introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),

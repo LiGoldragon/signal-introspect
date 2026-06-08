@@ -16,7 +16,7 @@ use signal_introspect::{
     IntrospectionUnimplemented, IntrospectionUnimplementedReason, MessageIdentifier,
     PrototypeWitness, PrototypeWitnessQuery,
 };
-use signal_persona_origin::{ComponentName, EngineIdentifier};
+use signal_persona::origin::{ComponentName, EngineIdentifier};
 
 const CANONICAL: &str = include_str!("../examples/canonical.nota");
 
