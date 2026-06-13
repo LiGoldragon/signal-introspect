@@ -1,3 +1,5 @@
+#![cfg(feature = "nota-text")]
+
 //! Canonical examples round-trip witness.
 //!
 //! Parses `examples/canonical.nota` end-to-end, decoding each record
