@@ -18,39 +18,39 @@
 ;; ─── Requests ─────────────────────────────────────────────────────
 
 ;; IntrospectionRequest::EngineSnapshot
-(EngineSnapshot ([prototype]))
+(EngineSnapshot (prototype))
 
 ;; IntrospectionRequest::ComponentSnapshot
-(ComponentSnapshot ([prototype] Router))
+(ComponentSnapshot (prototype Router))
 
 ;; IntrospectionRequest::DeliveryTrace
-(DeliveryTrace ([prototype] 7 Message))
+(DeliveryTrace (prototype 7 Message))
 
 ;; IntrospectionRequest::PrototypeWitness
-(PrototypeWitness ([prototype]))
+(PrototypeWitness (prototype))
 
 ;; ─── Replies ──────────────────────────────────────────────────────
 
 ;; IntrospectionReply::EngineSnapshot
-(EngineSnapshot ([prototype] [Router Terminal]))
+(EngineSnapshot (prototype [Router Terminal]))
 
 ;; IntrospectionReply::ComponentSnapshot — present observation
-(ComponentSnapshot ([prototype] Router (Some Ready)))
+(ComponentSnapshot (prototype Router (Some Ready)))
 
 ;; IntrospectionReply::ComponentSnapshot — no observation yet
-(ComponentSnapshot ([prototype] Router None))
+(ComponentSnapshot (prototype Router None))
 
 ;; IntrospectionReply::DeliveryTrace — present observation
-(DeliveryTrace ([prototype] 7 Message [(([prototype] 7 Message 1) Router Routed)]))
+(DeliveryTrace (prototype 7 Message [((prototype 7 Message 1) Router Routed)]))
 
 ;; IntrospectionReply::DeliveryTrace — no observation yet
-(DeliveryTrace ([prototype] 7 Message []))
+(DeliveryTrace (prototype 7 Message []))
 
 ;; IntrospectionReply::PrototypeWitness — all observed
-(PrototypeWitness ([prototype] (Some Ready) (Some Ready) (Some Ready) (Some Routed)))
+(PrototypeWitness (prototype (Some Ready) (Some Ready) (Some Ready) (Some Routed)))
 
 ;; IntrospectionReply::PrototypeWitness — none observed
-(PrototypeWitness ([prototype] None None None None))
+(PrototypeWitness (prototype None None None None))
 
 ;; IntrospectionReply::Unimplemented
 (Unimplemented (EngineSnapshot NotInPrototypeScope))

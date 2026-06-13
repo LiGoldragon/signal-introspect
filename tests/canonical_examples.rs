@@ -29,14 +29,14 @@ fn canonical_request_examples_round_trip() {
     let expected: Vec<(IntrospectionRequest, &str)> = vec![
         (
             IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery { engine: engine() }),
-            "(EngineSnapshot ([prototype]))",
+            "(EngineSnapshot (prototype))",
         ),
         (
             IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
                 engine: engine(),
                 target: IntrospectionTarget::Router,
             }),
-            "(ComponentSnapshot ([prototype] Router))",
+            "(ComponentSnapshot (prototype Router))",
         ),
         (
             IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
@@ -44,11 +44,11 @@ fn canonical_request_examples_round_trip() {
                 message_identifier: MessageIdentifier::new(7),
                 originator: ComponentName::Message,
             }),
-            "(DeliveryTrace ([prototype] 7 Message))",
+            "(DeliveryTrace (prototype 7 Message))",
         ),
         (
             IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { engine: engine() }),
-            "(PrototypeWitness ([prototype]))",
+            "(PrototypeWitness (prototype))",
         ),
     ];
 
@@ -79,7 +79,7 @@ fn canonical_reply_examples_round_trip() {
                     IntrospectionTarget::Terminal,
                 ],
             }),
-            "(EngineSnapshot ([prototype] [Router Terminal]))",
+            "(EngineSnapshot (prototype [Router Terminal]))",
         ),
         (
             IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
@@ -87,7 +87,7 @@ fn canonical_reply_examples_round_trip() {
                 target: IntrospectionTarget::Router,
                 readiness: Some(ComponentReadiness::Ready),
             }),
-            "(ComponentSnapshot ([prototype] Router (Some Ready)))",
+            "(ComponentSnapshot (prototype Router (Some Ready)))",
         ),
         (
             IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
@@ -95,7 +95,7 @@ fn canonical_reply_examples_round_trip() {
                 target: IntrospectionTarget::Router,
                 readiness: None,
             }),
-            "(ComponentSnapshot ([prototype] Router None))",
+            "(ComponentSnapshot (prototype Router None))",
         ),
         (
             IntrospectionReply::DeliveryTrace(DeliveryTrace {
@@ -113,7 +113,7 @@ fn canonical_reply_examples_round_trip() {
                     DeliveryTraceStatus::Routed,
                 )],
             }),
-            "(DeliveryTrace ([prototype] 7 Message [(([prototype] 7 Message 1) Router Routed)]))",
+            "(DeliveryTrace (prototype 7 Message [((prototype 7 Message 1) Router Routed)]))",
         ),
         (
             IntrospectionReply::DeliveryTrace(DeliveryTrace {
@@ -122,7 +122,7 @@ fn canonical_reply_examples_round_trip() {
                 originator: ComponentName::Message,
                 events: Vec::new(),
             }),
-            "(DeliveryTrace ([prototype] 7 Message []))",
+            "(DeliveryTrace (prototype 7 Message []))",
         ),
         (
             IntrospectionReply::PrototypeWitness(PrototypeWitness {
@@ -132,7 +132,7 @@ fn canonical_reply_examples_round_trip() {
                 terminal_seen: Some(ComponentReadiness::Ready),
                 delivery_status: Some(DeliveryTraceStatus::Routed),
             }),
-            "(PrototypeWitness ([prototype] (Some Ready) (Some Ready) (Some Ready) (Some Routed)))",
+            "(PrototypeWitness (prototype (Some Ready) (Some Ready) (Some Ready) (Some Routed)))",
         ),
         (
             IntrospectionReply::PrototypeWitness(PrototypeWitness {
@@ -142,7 +142,7 @@ fn canonical_reply_examples_round_trip() {
                 terminal_seen: None,
                 delivery_status: None,
             }),
-            "(PrototypeWitness ([prototype] None None None None))",
+            "(PrototypeWitness (prototype None None None None))",
         ),
         (
             IntrospectionReply::Unimplemented(IntrospectionUnimplemented {

@@ -268,7 +268,7 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
         .expect("decode configuration");
 
     assert_eq!(recovered, configuration);
-    assert!(text.contains("[/run/persona/X/introspect.sock]"));
+    assert!(text.contains("/run/persona/X/introspect.sock"));
 }
 
 #[test]
