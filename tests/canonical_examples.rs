@@ -18,12 +18,16 @@ use signal_introspect::{
     IntrospectionUnimplemented, IntrospectionUnimplementedReason, MessageIdentifier,
     PrototypeWitness, PrototypeWitnessQuery,
 };
-use signal_persona::origin::{ComponentName, EngineIdentifier};
+use signal_persona::{ComponentName, EngineIdentifier};
 
 const CANONICAL: &str = include_str!("../examples/canonical.nota");
 
 fn engine() -> EngineIdentifier {
     EngineIdentifier::new("prototype")
+}
+
+fn component_name(value: &str) -> ComponentName {
+    ComponentName::new(value)
 }
 
 #[test]
@@ -44,7 +48,7 @@ fn canonical_request_examples_round_trip() {
             IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
                 engine: engine(),
                 message_identifier: MessageIdentifier::new(7),
-                originator: ComponentName::Message,
+                originator: component_name("Message"),
             }),
             "(DeliveryTrace (prototype 7 Message))",
         ),
@@ -74,13 +78,10 @@ fn canonical_request_examples_round_trip() {
 fn canonical_reply_examples_round_trip() {
     let expected: Vec<(IntrospectionReply, &str)> = vec![
         (
-            IntrospectionReply::EngineSnapshot(EngineSnapshot {
-                engine: engine(),
-                observed_components: vec![
-                    IntrospectionTarget::Router,
-                    IntrospectionTarget::Terminal,
-                ],
-            }),
+            IntrospectionReply::EngineSnapshot(EngineSnapshot::new(
+                engine(),
+                vec![IntrospectionTarget::Router, IntrospectionTarget::Terminal],
+            )),
             "(EngineSnapshot (prototype [Router Terminal]))",
         ),
         (
@@ -100,30 +101,30 @@ fn canonical_reply_examples_round_trip() {
             "(ComponentSnapshot (prototype Router None))",
         ),
         (
-            IntrospectionReply::DeliveryTrace(DeliveryTrace {
-                engine: engine(),
-                message_identifier: MessageIdentifier::new(7),
-                originator: ComponentName::Message,
-                events: vec![DeliveryTraceEvent::new(
+            IntrospectionReply::DeliveryTrace(DeliveryTrace::new(
+                engine(),
+                MessageIdentifier::new(7),
+                component_name("Message"),
+                vec![DeliveryTraceEvent::new(
                     DeliveryTraceKey::new(
                         engine(),
                         MessageIdentifier::new(7),
-                        ComponentName::Message,
+                        component_name("Message"),
                         HopIndex::new(1),
                     ),
-                    ComponentName::Router,
+                    component_name("Router"),
                     DeliveryTraceStatus::Routed,
                 )],
-            }),
+            )),
             "(DeliveryTrace (prototype 7 Message [((prototype 7 Message 1) Router Routed)]))",
         ),
         (
-            IntrospectionReply::DeliveryTrace(DeliveryTrace {
-                engine: engine(),
-                message_identifier: MessageIdentifier::new(7),
-                originator: ComponentName::Message,
-                events: Vec::new(),
-            }),
+            IntrospectionReply::DeliveryTrace(DeliveryTrace::new(
+                engine(),
+                MessageIdentifier::new(7),
+                component_name("Message"),
+                Vec::new(),
+            )),
             "(DeliveryTrace (prototype 7 Message []))",
         ),
         (
