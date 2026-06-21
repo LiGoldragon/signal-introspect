@@ -128,6 +128,7 @@ pub enum IntrospectionTarget {
     Harness,
     Terminal,
     Introspect,
+    Signal,
 }
 
 #[derive(
@@ -598,18 +599,285 @@ pub enum IntrospectionDeniedReason {
     Redacted,
 }
 
+// ─── Component-internal trace ingestion ──────────────────────
+//
+// Pushed actor-boundary trace observations from a single component
+// process. Mirrors the [`DeliveryTraceEvent`] vocabulary above:
+// component identity + a monotonic order key + a closed
+// classification. The wire type is shared by the emitting component
+// and the introspect daemon so neither end depends on the other; the
+// transport is `triad_runtime::trace`.
+
+/// The schema-derived name of one actor-boundary trace point, e.g.
+/// `SignalAdmitted`, `NexusEntered`, `SemaWriteApplied`. Bare-eligible
+/// atom at its `String` position.
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct TraceEventName(String);
+
+impl TraceEventName {
+    pub fn new(payload: impl Into<String>) -> Self {
+        Self(payload.into())
+    }
+
+    pub fn payload(&self) -> &String {
+        &self.0
+    }
+
+    pub fn into_payload(self) -> String {
+        self.0
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.payload().as_str()
+    }
+}
+
+impl From<String> for TraceEventName {
+    fn from(payload: String) -> Self {
+        Self::new(payload)
+    }
+}
+
+impl std::fmt::Display for TraceEventName {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.payload().fmt(formatter)
+    }
+}
+
+impl PartialEq<&str> for TraceEventName {
+    fn eq(&self, other: &&str) -> bool {
+        self.payload() == other
+    }
+}
+
+/// Monotonic per-emitter order key for component-internal trace events.
+/// Establishes a deterministic replay order inside one emitter the way
+/// [`HopIndex`] orders a delivery chain.
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+)]
+pub struct TraceSequence(u64);
+
+impl TraceSequence {
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> u64 {
+        self.0
+    }
+
+    pub const fn next(self) -> Self {
+        Self(self.0.saturating_add(1))
+    }
+}
+
+impl From<u64> for TraceSequence {
+    fn from(value: u64) -> Self {
+        Self::new(value)
+    }
+}
+
+/// Which actor-boundary layer one component-internal trace event came
+/// from. Closed: the signal I/O shape axis mentci filters on in the
+/// next slice. Positively-named layers only — there is no "unknown"
+/// member; an unclassifiable event is simply not emitted.
+#[derive(
+    Archive,
+    RkyvSerialize,
+    RkyvDeserialize,
+    NotaEncode,
+    NotaDecode,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+pub enum TraceLayer {
+    Signal,
+    Nexus,
+    Sema,
+}
+
+/// One pushed component-internal trace observation. Mirrors
+/// [`DeliveryTraceEvent`]: component identity + ordering + a closed
+/// classification. Shared on the wire by the emitting component and the
+/// introspect daemon via [`triad_runtime::trace::TraceEventFrame`].
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct ComponentTraceEvent {
+    pub engine: EngineIdentifier,
+    pub component: IntrospectionTarget,
+    pub layer: TraceLayer,
+    pub event_name: TraceEventName,
+    pub sequence: TraceSequence,
+}
+
+impl ComponentTraceEvent {
+    pub fn new(
+        engine: EngineIdentifier,
+        component: IntrospectionTarget,
+        layer: TraceLayer,
+        event_name: TraceEventName,
+        sequence: TraceSequence,
+    ) -> Self {
+        Self {
+            engine,
+            component,
+            layer,
+            event_name,
+            sequence,
+        }
+    }
+
+    pub fn matches_query(&self, query: &ComponentTraceQuery) -> bool {
+        self.engine == query.engine
+            && self.component == query.component
+            && query
+                .event_name
+                .as_ref()
+                .is_none_or(|name| &self.event_name == name)
+    }
+}
+
+impl triad_runtime::trace::TraceEventFrame for ComponentTraceEvent {
+    fn to_trace_archive(&self) -> Result<Vec<u8>, triad_runtime::trace::TraceError> {
+        rkyv::to_bytes::<rkyv::rancor::Error>(self)
+            .map(|archive| archive.to_vec())
+            .map_err(|_| triad_runtime::trace::TraceError::ArchiveEncode)
+    }
+
+    fn from_trace_archive(archive: &[u8]) -> Result<Self, triad_runtime::trace::TraceError> {
+        rkyv::from_bytes::<Self, rkyv::rancor::Error>(archive)
+            .map_err(|_| triad_runtime::trace::TraceError::ArchiveDecode)
+    }
+}
+
+/// Filter request: by component kind, optionally narrowed to one event
+/// name. `event_name: None` returns every event for the component.
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct ComponentTraceQuery {
+    pub engine: EngineIdentifier,
+    pub component: IntrospectionTarget,
+    pub event_name: Option<TraceEventName>,
+}
+
+impl ComponentTraceQuery {
+    pub fn new(
+        engine: EngineIdentifier,
+        component: IntrospectionTarget,
+        event_name: Option<TraceEventName>,
+    ) -> Self {
+        Self {
+            engine,
+            component,
+            event_name,
+        }
+    }
+}
+
+/// Sequence-ordered component-internal trace events for one component.
+/// An empty `events` vector means the introspect daemon has not yet
+/// seen any pushed event for the selected component.
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct ComponentTraceEvents(Vec<ComponentTraceEvent>);
+
+impl ComponentTraceEvents {
+    pub fn new(payload: Vec<ComponentTraceEvent>) -> Self {
+        Self(payload)
+    }
+
+    pub fn payload(&self) -> &Vec<ComponentTraceEvent> {
+        &self.0
+    }
+
+    pub fn into_payload(self) -> Vec<ComponentTraceEvent> {
+        self.0
+    }
+
+    pub fn as_slice(&self) -> &[ComponentTraceEvent] {
+        self.payload().as_slice()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.payload().is_empty()
+    }
+}
+
+impl From<Vec<ComponentTraceEvent>> for ComponentTraceEvents {
+    fn from(payload: Vec<ComponentTraceEvent>) -> Self {
+        Self::new(payload)
+    }
+}
+
+/// Reply: sequence-ordered component-internal trace events for the
+/// selected component.
+#[derive(
+    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+)]
+pub struct ComponentTrace {
+    pub engine: EngineIdentifier,
+    pub component: IntrospectionTarget,
+    pub events: ComponentTraceEvents,
+}
+
+impl ComponentTrace {
+    pub fn new(
+        engine: EngineIdentifier,
+        component: IntrospectionTarget,
+        events: impl Into<ComponentTraceEvents>,
+    ) -> Self {
+        Self {
+            engine,
+            component,
+            events: events.into(),
+        }
+    }
+
+    pub fn events(&self) -> &[ComponentTraceEvent] {
+        self.events.as_slice()
+    }
+
+    pub fn into_events(self) -> Vec<ComponentTraceEvent> {
+        self.events.into_payload()
+    }
+}
+
 signal_channel! {
     channel Introspection {
         operation EngineSnapshot(EngineSnapshotQuery),
         operation ComponentSnapshot(ComponentSnapshotQuery),
         operation DeliveryTrace(DeliveryTraceQuery),
         operation PrototypeWitness(PrototypeWitnessQuery),
+        operation ComponentTrace(ComponentTraceQuery),
     }
     reply IntrospectionReply {
         EngineSnapshot(EngineSnapshot),
         ComponentSnapshot(ComponentSnapshot),
         DeliveryTrace(DeliveryTrace),
         PrototypeWitness(PrototypeWitness),
+        ComponentTrace(ComponentTrace),
         Unimplemented(IntrospectionUnimplemented),
         Denied(IntrospectionDenied),
     }
@@ -657,6 +925,11 @@ pub struct IntrospectDaemonConfiguration {
     pub router_socket_path: WirePath,
     /// Terminal supervisor's domain socket (peer).
     pub terminal_socket_path: WirePath,
+    /// Where the daemon binds the component-trace ingestion Unix socket
+    /// that emitting components push `ComponentTraceEvent` frames to.
+    /// Empty path disables trace ingestion (mirrors the empty-peer-socket
+    /// convention).
+    pub trace_socket_path: WirePath,
     /// The engine owner identity passed to the introspect daemon.
     pub owner_identity: OwnerIdentity,
 }

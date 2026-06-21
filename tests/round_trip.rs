@@ -3,12 +3,12 @@ use signal_frame::{
     SignalOperationHeads, SubReply,
 };
 use signal_introspect::{
-    ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, DeliveryTrace,
-    DeliveryTraceEvent, DeliveryTraceKey, DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot,
-    EngineSnapshotQuery, HopIndex, IntrospectionFrame as Frame,
-    IntrospectionFrameBody as FrameBody, IntrospectionReply, IntrospectionRequest,
-    IntrospectionTarget, MessageIdentifier, PrototypeWitness, PrototypeWitnessQuery, SocketMode,
-    WirePath,
+    ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, ComponentTrace,
+    ComponentTraceEvent, ComponentTraceQuery, DeliveryTrace, DeliveryTraceEvent, DeliveryTraceKey,
+    DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot, EngineSnapshotQuery, HopIndex,
+    IntrospectionFrame as Frame, IntrospectionFrameBody as FrameBody, IntrospectionReply,
+    IntrospectionRequest, IntrospectionTarget, MessageIdentifier, PrototypeWitness,
+    PrototypeWitnessQuery, SocketMode, TraceEventName, TraceLayer, TraceSequence, WirePath,
 };
 use signal_persona::{ComponentName, EngineIdentifier};
 
@@ -93,6 +93,120 @@ fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
 }
 
 #[test]
+fn component_trace_query_round_trips_through_length_prefixed_frame() {
+    let request = IntrospectionRequest::ComponentTrace(ComponentTraceQuery::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        Some(TraceEventName::new("SignalAdmitted")),
+    ));
+    round_trip_request(request);
+}
+
+#[test]
+fn component_trace_query_round_trips_with_no_event_name_filter() {
+    let request = IntrospectionRequest::ComponentTrace(ComponentTraceQuery::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        None,
+    ));
+    round_trip_request(request);
+}
+
+#[test]
+fn component_trace_reply_round_trips_through_length_prefixed_frame() {
+    let events = vec![
+        ComponentTraceEvent::new(
+            EngineIdentifier::new("prototype"),
+            IntrospectionTarget::Signal,
+            TraceLayer::Signal,
+            TraceEventName::new("SignalAdmitted"),
+            TraceSequence::new(0),
+        ),
+        ComponentTraceEvent::new(
+            EngineIdentifier::new("prototype"),
+            IntrospectionTarget::Signal,
+            TraceLayer::Sema,
+            TraceEventName::new("SemaWriteApplied"),
+            TraceSequence::new(1),
+        ),
+    ];
+    let reply = IntrospectionReply::ComponentTrace(ComponentTrace::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        events.clone(),
+    ));
+
+    let recovered = round_trip_reply(reply.clone());
+    assert_eq!(recovered, reply);
+    match recovered {
+        IntrospectionReply::ComponentTrace(trace) => {
+            assert_eq!(trace.events(), events.as_slice());
+            assert_eq!(trace.events()[0].sequence.value(), 0);
+            assert_eq!(trace.events()[1].sequence, TraceSequence::new(0).next());
+            assert_eq!(trace.events()[0].layer, TraceLayer::Signal);
+            assert_eq!(trace.events()[1].event_name, "SemaWriteApplied");
+        }
+        other => panic!("expected component trace reply, got {other:?}"),
+    }
+}
+
+#[test]
+fn component_trace_event_round_trips_through_trace_event_frame() {
+    use triad_runtime::trace::TraceEventFrame;
+
+    let event = ComponentTraceEvent::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        TraceLayer::Nexus,
+        TraceEventName::new("NexusEntered"),
+        TraceSequence::new(42),
+    );
+
+    let archive = event
+        .to_trace_archive()
+        .expect("archive component trace event");
+    let recovered = ComponentTraceEvent::from_trace_archive(&archive).expect("dearchive");
+    assert_eq!(recovered, event);
+}
+
+#[test]
+fn component_trace_query_filter_matches_by_component_and_event_name() {
+    let event = ComponentTraceEvent::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        TraceLayer::Signal,
+        TraceEventName::new("SignalAdmitted"),
+        TraceSequence::new(0),
+    );
+
+    let unfiltered = ComponentTraceQuery::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        None,
+    );
+    let matching_name = ComponentTraceQuery::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        Some(TraceEventName::new("SignalAdmitted")),
+    );
+    let other_name = ComponentTraceQuery::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        Some(TraceEventName::new("NexusEntered")),
+    );
+    let other_component = ComponentTraceQuery::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Router,
+        None,
+    );
+
+    assert!(event.matches_query(&unfiltered));
+    assert!(event.matches_query(&matching_name));
+    assert!(!event.matches_query(&other_name));
+    assert!(!event.matches_query(&other_component));
+}
+
+#[test]
 fn prototype_witness_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
         engine: EngineIdentifier::new("prototype"),
@@ -109,6 +223,7 @@ fn introspection_request_heads_are_contract_local_operations() {
             "ComponentSnapshot",
             "DeliveryTrace",
             "PrototypeWitness",
+            "ComponentTrace",
         ]
     );
 }
@@ -263,6 +378,7 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
         manager_socket_path: WirePath::new("/run/persona/X/persona.sock"),
         router_socket_path: WirePath::new("/run/persona/X/router.sock"),
         terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
+        trace_socket_path: WirePath::new("/run/persona/X/introspect-trace.sock"),
         owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
     };
 
@@ -289,6 +405,7 @@ fn introspect_daemon_configuration_round_trips_through_rkyv() {
         manager_socket_path: WirePath::new("/run/persona/X/persona.sock"),
         router_socket_path: WirePath::new("/run/persona/X/router.sock"),
         terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
+        trace_socket_path: WirePath::new("/run/persona/X/introspect-trace.sock"),
         owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
     };
 
