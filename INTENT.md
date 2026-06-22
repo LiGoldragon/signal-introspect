@@ -33,6 +33,10 @@ The Introspection channel carries:
 - **Replies:** `EngineSnapshot`, `ComponentSnapshot`, `DeliveryTrace`,
   `PrototypeWitness` (the projected roll-up records), plus `Unimplemented` and
   `Denied` carrying typed reason enums.
+- **Component trace events:** typed component targets and trace layers include
+  Spirit authorization observations, so a traced `spirit` daemon can expose the
+  criome authorization-return point as structured introspection data rather than
+  an untyped log line.
 
 The wire vocabulary is contract-local: the daemon lowers these public operations
 into component-local commands and aggregates observations from peer daemons; Sema
