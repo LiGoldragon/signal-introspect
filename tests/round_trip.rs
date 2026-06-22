@@ -171,6 +171,25 @@ fn component_trace_event_round_trips_through_trace_event_frame() {
 }
 
 #[test]
+fn spirit_authorization_trace_event_round_trips_through_trace_event_frame() {
+    use triad_runtime::trace::TraceEventFrame;
+
+    let event = ComponentTraceEvent::new(
+        EngineIdentifier::new("spirit"),
+        IntrospectionTarget::Spirit,
+        TraceLayer::Authorization,
+        TraceEventName::new("AuthorizationObserved"),
+        TraceSequence::new(43),
+    );
+
+    let archive = event
+        .to_trace_archive()
+        .expect("archive spirit authorization trace event");
+    let recovered = ComponentTraceEvent::from_trace_archive(&archive).expect("dearchive");
+    assert_eq!(recovered, event);
+}
+
+#[test]
 fn component_trace_event_displays_as_nota() {
     let event = ComponentTraceEvent::new(
         EngineIdentifier::new("prototype"),

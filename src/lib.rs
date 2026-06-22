@@ -124,6 +124,7 @@ pub enum IntrospectionTarget {
     Mind,
     Message,
     Router,
+    Spirit,
     System,
     Harness,
     Terminal,
@@ -713,6 +714,7 @@ pub enum TraceLayer {
     Signal,
     Nexus,
     Sema,
+    Authorization,
 }
 
 /// One pushed component-internal trace observation. Mirrors

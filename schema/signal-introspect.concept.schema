@@ -19,7 +19,7 @@
   DeliveryTrace (Identifier)
   PrototypeWitness (Text)
   ComponentTrace [(Engine Engine) (Component Component) (Layer TraceLayer) (EventName TraceEventName) (Sequence TraceSequence)]
-  TraceLayer [Signal Nexus Sema]
+  TraceLayer [Signal Nexus Sema Authorization]
   TraceEventName (Name)
   TraceSequence (Identifier)
   Observation (Identifier)
