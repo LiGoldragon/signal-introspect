@@ -1,3 +1,4 @@
+use nota_next::NotaEncode;
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SignalOperationHeads, SubReply,
@@ -167,6 +168,18 @@ fn component_trace_event_round_trips_through_trace_event_frame() {
         .expect("archive component trace event");
     let recovered = ComponentTraceEvent::from_trace_archive(&archive).expect("dearchive");
     assert_eq!(recovered, event);
+}
+
+#[test]
+fn component_trace_event_displays_as_nota() {
+    let event = ComponentTraceEvent::new(
+        EngineIdentifier::new("prototype"),
+        IntrospectionTarget::Signal,
+        TraceLayer::Signal,
+        TraceEventName::new("SignalAdmitted"),
+        TraceSequence::new(7),
+    );
+    assert_eq!(event.to_string(), event.to_nota());
 }
 
 #[test]

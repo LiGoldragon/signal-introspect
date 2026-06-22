@@ -757,6 +757,12 @@ impl ComponentTraceEvent {
     }
 }
 
+impl std::fmt::Display for ComponentTraceEvent {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_nota().fmt(formatter)
+    }
+}
+
 impl triad_runtime::trace::TraceEventFrame for ComponentTraceEvent {
     fn to_trace_archive(&self) -> Result<Vec<u8>, triad_runtime::trace::TraceError> {
         rkyv::to_bytes::<rkyv::rancor::Error>(self)
