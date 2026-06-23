@@ -6,7 +6,7 @@
 //! `signal-router`, etc.). This crate must not become a bucket
 //! for every component's internal rows.
 
-use nota_next::{Block, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
+use nota::{Block, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
 use signal_frame::signal_channel;
 pub use signal_message::MessageSlot as MessageIdentifier;

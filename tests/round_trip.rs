@@ -1,4 +1,4 @@
-use nota_next::NotaEncode;
+use nota::NotaEncode;
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SignalOperationHeads, SubReply,
@@ -397,7 +397,7 @@ fn introspection_status_enums_are_closed_no_unknown_variants() {
 
 #[test]
 fn introspect_daemon_configuration_round_trips_through_nota_text() {
-    use nota_next::{NotaEncode, NotaSource};
+    use nota::{NotaEncode, NotaSource};
     use signal_introspect::IntrospectDaemonConfiguration;
     use signal_persona::{OwnerIdentity, UnixUserIdentifier};
 
