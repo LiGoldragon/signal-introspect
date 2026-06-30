@@ -4,11 +4,16 @@
 
 ## 0 · TL;DR
 
-`signal-introspect` is the wrapper-and-selector contract a
-client uses to ask `introspect` for an engine observation.
-It defines `IntrospectionRequest`, `IntrospectionReply`, the targets
+`signal-introspect` is the ordinary peer-callable wire contract a
+client uses to ask the `introspect` daemon for an engine observation.
+It is the central wrapper-and-selector vocabulary: it defines
+`IntrospectionRequest`, `IntrospectionReply`, the targets
 and scopes a query may name, and the typed roll-up records that
-project peer-component observations to a human-facing surface.
+project peer-component observations to a human-facing surface. It asks
+and wraps; the component-specific observation row types stay in their
+own owning component contracts, so this crate never becomes a shared
+schema bucket. Runtime actors, the sema-engine store, peer-subscription
+fan-out, and projection logic live in `introspect`.
 
 ## Migration history — signal-frame operation heads (2026-06-07)
 
@@ -72,6 +77,16 @@ subscription variants.
 - Reply records that wrap or summarize observations for projection.
 - Contract-local verbs declared in the `signal_channel!` invocation;
   Sema classification (Layer 3) is daemon-side projection only.
+
+Typed component targets and trace layers include Spirit authorization
+observations: a traced `spirit` daemon exposes the criome
+authorization-return point as structured introspection data rather than
+an untyped log line.
+
+Request payloads carry the query target and scope only. They do not
+mint sequence numbers, snapshot timestamps, or correlation identity
+that belongs to the daemon; `introspect` mints those values at the
+daemon.
 
 ## 3 · Closed-enum integrity
 
@@ -159,6 +174,7 @@ label is computed at observation publish time inside the daemon.
 | Round-trip witnesses cover every variant in rkyv. | `tests/round_trip.rs` exercises every request and reply variant through `Frame::encode_length_prefixed` / `decode_length_prefixed`. |
 | Round-trip witnesses cover every variant in NOTA. | `examples/canonical.nota` holds one canonical text example per request/reply variant; round-trip tests parse and re-emit each. |
 | No stringly-typed dispatch (`match s.as_str()`) for closed-set states. | All status/scope/reason fields are typed closed enums. |
+| Request payloads carry query target and scope only; they mint no sequence numbers, snapshot timestamps, or correlation identity. | Public type review: request `*Query` records carry no daemon-minted fields; `introspect` supplies those at observation time. |
 | Contract crate dependencies use a named API reference (branch or tag), not a raw revision pin. | `Cargo.toml` review: `signal-frame` and downstream contract crates declare `git = "..."` with a named-branch shape; raw `rev = "..."` pins are not used. |
 
 ## 6 · NOTA codec shape on `signal_channel!` operation heads
