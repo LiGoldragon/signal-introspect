@@ -17,7 +17,7 @@ default   = ["nota-text"]
 nota-text = ["signal-frame/nota-text"]
 
 [dependencies]
-nota = { package = "nota", git = "https://github.com/LiGoldragon/nota-next.git", branch = "main" }
+nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main" }
 signal-frame             = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
 signal-persona           = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "main", features = ["nota-text"] }
 signal-message           = { git = "https://github.com/LiGoldragon/signal-message.git", branch = "main" }
