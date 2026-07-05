@@ -18,10 +18,10 @@ nota-text = ["signal-frame/nota-text"]
 
 [dependencies]
 nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main" }
-signal-frame             = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "drop-next" }
-signal-persona           = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "drop-next", features = ["nota-text"] }
-signal-message           = { git = "https://github.com/LiGoldragon/signal-message.git", branch = "drop-next" }
-triad-runtime            = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "drop-next" }
+signal-frame             = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
+signal-persona           = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "main", features = ["nota-text"] }
+signal-message           = { git = "https://github.com/LiGoldragon/signal-message.git", branch = "main" }
+triad-runtime            = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
 rkyv                     = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 thiserror                = "2"
 
