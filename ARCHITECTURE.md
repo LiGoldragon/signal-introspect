@@ -164,7 +164,7 @@ label is computed at observation publish time inside the daemon.
 | Every request/reply travels as a Signal frame. | `tests/round_trip.rs` length-prefixed frame tests per variant. |
 | Every `IntrospectionRequest` variant is a contract-local verb in verb form. | The `signal_channel!` declaration names each verb; round-trip tests assert each variant's NOTA head. Sema classification is daemon-side projection only. |
 | Read-shaped payloads project to Sema `Match` / `Subscribe`; write-shaped payloads project to `Assert` / `Mutate` / `Retract`. | Daemon-side `ToSemaOperation` impl is the witness; today all read-shaped operations project to `Match`. |
-| NOTA derives live on the same typed records. | Cargo tests compile `nota-next` `NotaEncode` and `NotaDecode` derives; canonical examples round-trip the text form. |
+| NOTA derives live on the same typed records. | Cargo tests compile `nota` `NotaEncode` and `NotaDecode` derives; canonical examples round-trip the text form. |
 | The contract contains no daemon code. | Source scan: no Kameo, Tokio, socket, or storage code. |
 | Wire enums contain no `Unknown` variant. | `tests/round_trip.rs::introspection_status_enums_are_closed_no_unknown_variants` exhaustively matches every `ComponentReadiness` and `DeliveryTraceStatus` variant. Adding an `Unknown` variant breaks the match. |
 | Any record name containing the word `Unknown` represents a positive "entity not in our state" rejection, not a polling-shape escape hatch. | This crate has no `Unknown*` record names today; the "not observed yet" axis lives on `Option<>` wrappers on the carrier records. |
