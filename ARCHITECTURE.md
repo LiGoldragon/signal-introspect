@@ -17,10 +17,9 @@ fan-out, and projection logic live in `introspect`.
 
 ## Migration history — signal-frame operation heads (2026-06-07)
 
-The public wire no longer carries `SignalVerb::Match`. The four
-introspection reads are now bare contract-local operation heads:
-`EngineSnapshot`, `ComponentSnapshot`, `DeliveryTrace`, and
-`PrototypeWitness`. Sema classification is daemon-side projection
+The public wire no longer carries `SignalVerb::Match`. The introspection reads are bare contract-local operation heads in
+`schema/lib.schema`: `EngineSnapshot`, `ComponentSnapshot`,
+`DeliveryTrace`, `PrototypeWitness`, and `ComponentTrace`. Sema classification is daemon-side projection
 only.
 
 This crate depends on `signal-frame` for length-prefixed rkyv framing.
@@ -75,8 +74,9 @@ subscription variants.
 - Query records for engine snapshot, component snapshot, delivery
   trace, and the prototype rollup `PrototypeWitness`.
 - Reply records that wrap or summarize observations for projection.
-- Contract-local verbs declared in the `signal_channel!` invocation;
-  Sema classification (Layer 3) is daemon-side projection only.
+- Contract-local verbs declared in the TrueSchema input root in
+  `schema/lib.schema`; Sema classification (Layer 3) is daemon-side
+  projection only.
 
 Typed component targets and trace layers include Spirit authorization
 observations: a traced `spirit` daemon exposes the criome
@@ -162,28 +162,29 @@ label is computed at observation publish time inside the daemon.
 |---|---|
 | The central contract asks and wraps; it does not define component rows. | Public type review: no router/terminal/manager row vocabulary defined here. Source-scan witness names "central contract does not define peer rows." |
 | Every request/reply travels as a Signal frame. | `tests/round_trip.rs` length-prefixed frame tests per variant. |
-| Every `IntrospectionRequest` variant is a contract-local verb in verb form. | The `signal_channel!` declaration names each verb; round-trip tests assert each variant's NOTA head. Sema classification is daemon-side projection only. |
+| Every `IntrospectionRequest` variant is a contract-local verb in verb form. | `schema/lib.schema` names each input-root verb; round-trip tests assert each variant's NOTA head. Sema classification is daemon-side projection only. |
 | Read-shaped payloads project to Sema `Match` / `Subscribe`; write-shaped payloads project to `Assert` / `Mutate` / `Retract`. | Daemon-side `ToSemaOperation` impl is the witness; today all read-shaped operations project to `Match`. |
-| NOTA derives live on the same typed records. | Cargo tests compile `nota-next` `NotaEncode` and `NotaDecode` derives; canonical examples round-trip the text form. |
+| NOTA derives live on the same typed records. | Cargo tests compile TrueSchema-emitted optional `nota` `NotaEncode` and `NotaDecode` derives; canonical examples round-trip the text form. |
 | The contract contains no daemon code. | Source scan: no Kameo, Tokio, socket, or storage code. |
 | Wire enums contain no `Unknown` variant. | `tests/round_trip.rs::introspection_status_enums_are_closed_no_unknown_variants` exhaustively matches every `ComponentReadiness` and `DeliveryTraceStatus` variant. Adding an `Unknown` variant breaks the match. |
 | Any record name containing the word `Unknown` represents a positive "entity not in our state" rejection, not a polling-shape escape hatch. | This crate has no `Unknown*` record names today; the "not observed yet" axis lives on `Option<>` wrappers on the carrier records. |
 | The "not yet observed" axis lives on `Option<>` wrappers, never inside a closed status enum. | `prototype_witness_reply_round_trips_with_no_observations_yet` exercises the all-`None` carrier shape end-to-end through the length-prefixed frame. |
 | Delivery trace correlation uses the four-field key `(engine, message_identifier, originator, hop_index)`. | `tests/round_trip.rs::delivery_trace_key_round_trips_with_four_correlation_fields` proves the key rides the contract reply. |
-| Each variant's NOTA head matches the contract-local verb declared in `signal_channel!`. | The macro generates the codec; round-trip tests assert each variant's NOTA head. |
+| Each variant's NOTA head matches the contract-local verb declared in `schema/lib.schema`. | TrueSchema/schema-rust generates the codec; round-trip tests assert each variant's NOTA head. |
 | Round-trip witnesses cover every variant in rkyv. | `tests/round_trip.rs` exercises every request and reply variant through `Frame::encode_length_prefixed` / `decode_length_prefixed`. |
 | Round-trip witnesses cover every variant in NOTA. | `examples/canonical.nota` holds one canonical text example per request/reply variant; round-trip tests parse and re-emit each. |
 | No stringly-typed dispatch (`match s.as_str()`) for closed-set states. | All status/scope/reason fields are typed closed enums. |
 | Request payloads carry query target and scope only; they mint no sequence numbers, snapshot timestamps, or correlation identity. | Public type review: request `*Query` records carry no daemon-minted fields; `introspect` supplies those at observation time. |
-| Contract crate dependencies use a named API reference (branch or tag), not a raw revision pin. | `Cargo.toml` review: `signal-frame` and downstream contract crates declare `git = "..."` with a named-branch shape; raw `rev = "..."` pins are not used. |
+| Producer contract dependencies are portable TrueSchema references. | `Cargo.toml` review: downstream TrueSchema contract crates use pushed bookmarks, and the schema-rust generator is pinned to the known-good TrueSchema revision. |
 
-## 6 · NOTA codec shape on `signal_channel!` operation heads
+## 6 · NOTA codec shape on TrueSchema operation heads
 
-The `signal_channel!` macro emits a request variant's NOTA head as
-the operation head. For example,
-`IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { .. })`
-encodes as `(PrototypeWitness (...))`. Canonical examples and
-round-trip tests carry the operation heads.
+The TrueSchema input and output roots emit each enum variant's NOTA
+head as the operation or reply head. Single-field query payloads encode
+as a bare value, so `PrototypeWitnessQuery::new(engine)` encodes as
+`(PrototypeWitness prototype)`. Multi-field payloads remain tag-less
+records such as `(ComponentSnapshot (prototype Router))`. Canonical
+examples and round-trip tests carry the operation heads.
 
 ## 7 · Status
 
@@ -214,19 +215,23 @@ wire surface".
 ## 9 · Code map
 
 ```text
+build.rs                  — TrueSchema freshness gate and dependency schema resolver
+schema/
+└── lib.schema             — input/output roots and contract vocabulary
 src/
-└── lib.rs                — payloads + signal_channel! invocation
+├── lib.rs                 — schema re-export plus compatibility methods
+└── schema/                — checked-in schema-rust output
 examples/
 └── canonical.nota         — one canonical example per request/reply variant
 tests/
+├── canonical_examples.rs  — canonical NOTA parser/re-emitter
 └── round_trip.rs          — per-variant frame round trips + NOTA witnesses
                              + closed-enum + operation-head witnesses
-                             + canonical examples parser
 ```
 
 ## See also
 
-- `signal-frame/macros/src/validate.rs` — the macro.
+- `schema/lib.schema` — the TrueSchema root declaration.
 - `~/primary/skills/component-triad.md` §"Verbs come in three layers".
 - `signal-router/ARCHITECTURE.md` — router observation rows
   this crate wraps as `DeliveryTraceEvent` carriers.

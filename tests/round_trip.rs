@@ -68,17 +68,17 @@ fn round_trip_reply(reply: IntrospectionReply) -> IntrospectionReply {
 
 #[test]
 fn engine_snapshot_query_round_trips_through_length_prefixed_frame() {
-    let request = IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery {
-        engine: EngineIdentifier::new("prototype"),
-    });
+    let request = IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery::new(
+        EngineIdentifier::new("prototype"),
+    ));
     round_trip_request(request);
 }
 
 #[test]
 fn component_snapshot_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
-        engine: EngineIdentifier::new("prototype"),
-        target: IntrospectionTarget::Router,
+        engine_identifier: EngineIdentifier::new("prototype"),
+        introspection_target: IntrospectionTarget::Router,
     });
     round_trip_request(request);
 }
@@ -86,9 +86,9 @@ fn component_snapshot_query_round_trips_through_length_prefixed_frame() {
 #[test]
 fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
-        engine: EngineIdentifier::new("prototype"),
+        engine_identifier: EngineIdentifier::new("prototype"),
         message_identifier: MessageIdentifier::new(7),
-        originator: component_name("Message"),
+        component_name: component_name("Message"),
     });
     round_trip_request(request);
 }
@@ -142,10 +142,13 @@ fn component_trace_reply_round_trips_through_length_prefixed_frame() {
     match recovered {
         IntrospectionReply::ComponentTrace(trace) => {
             assert_eq!(trace.events(), events.as_slice());
-            assert_eq!(trace.events()[0].sequence.value(), 0);
-            assert_eq!(trace.events()[1].sequence, TraceSequence::new(0).next());
-            assert_eq!(trace.events()[0].layer, TraceLayer::Signal);
-            assert_eq!(trace.events()[1].event_name, "SemaWriteApplied");
+            assert_eq!(trace.events()[0].trace_sequence.value(), 0);
+            assert_eq!(
+                trace.events()[1].trace_sequence,
+                TraceSequence::new(0).next()
+            );
+            assert_eq!(trace.events()[0].trace_layer, TraceLayer::Signal);
+            assert_eq!(trace.events()[1].trace_event_name, "SemaWriteApplied");
         }
         other => panic!("expected component trace reply, got {other:?}"),
     }
@@ -240,9 +243,9 @@ fn component_trace_query_filter_matches_by_component_and_event_name() {
 
 #[test]
 fn prototype_witness_query_round_trips_through_length_prefixed_frame() {
-    let request = IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
-        engine: EngineIdentifier::new("prototype"),
-    });
+    let request = IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery::new(
+        EngineIdentifier::new("prototype"),
+    ));
     round_trip_request(request);
 }
 
@@ -263,11 +266,11 @@ fn introspection_request_heads_are_contract_local_operations() {
 #[test]
 fn prototype_witness_reply_round_trips_through_length_prefixed_frame() {
     let reply = IntrospectionReply::PrototypeWitness(PrototypeWitness {
-        engine: EngineIdentifier::new("prototype"),
+        engine_identifier: EngineIdentifier::new("prototype"),
         manager_seen: Some(ComponentReadiness::Ready),
         router_seen: Some(ComponentReadiness::Ready),
         terminal_seen: Some(ComponentReadiness::Ready),
-        delivery_status: Some(DeliveryTraceStatus::Delivered),
+        optional_delivery_trace_status: Some(DeliveryTraceStatus::Delivered),
     });
     assert_eq!(round_trip_reply(reply.clone()), reply);
 }
@@ -279,11 +282,11 @@ fn prototype_witness_reply_round_trips_with_no_observations_yet() {
     // Option<>. Adding back an `Unknown` variant on either inner enum
     // would defeat the closed-enum integrity test below.
     let reply = IntrospectionReply::PrototypeWitness(PrototypeWitness {
-        engine: EngineIdentifier::new("prototype"),
+        engine_identifier: EngineIdentifier::new("prototype"),
         manager_seen: None,
         router_seen: None,
         terminal_seen: None,
-        delivery_status: None,
+        optional_delivery_trace_status: None,
     });
     assert_eq!(round_trip_reply(reply.clone()), reply);
 }
@@ -299,9 +302,9 @@ fn component_observations_are_wrapped_not_defined_here() {
         ],
     ));
     let component_reply = IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
-        engine: EngineIdentifier::new("prototype"),
-        target: IntrospectionTarget::Router,
-        readiness: Some(ComponentReadiness::Ready),
+        engine_identifier: EngineIdentifier::new("prototype"),
+        introspection_target: IntrospectionTarget::Router,
+        optional_component_readiness: Some(ComponentReadiness::Ready),
     });
     let trace_reply = IntrospectionReply::DeliveryTrace(DeliveryTrace::new(
         EngineIdentifier::new("prototype"),
@@ -353,14 +356,17 @@ fn delivery_trace_key_round_trips_with_four_correlation_fields() {
     assert_eq!(trace_key.hop_index.value(), 3);
     assert_eq!(trace_key.next_hop().hop_index.value(), 4);
     assert_eq!(
-        trace_key.join_key().engine,
+        trace_key.join_key().engine_identifier,
         EngineIdentifier::new("prototype")
     );
     assert_eq!(
         trace_key.join_key().message_identifier,
         MessageIdentifier::new(7)
     );
-    assert_eq!(trace_key.join_key().originator, component_name("Message"));
+    assert_eq!(
+        trace_key.join_key().component_name,
+        component_name("Message")
+    );
 }
 
 #[test]

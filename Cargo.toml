@@ -2,11 +2,13 @@
 name         = "signal-introspect"
 version      = "0.1.0"
 edition      = "2024"
-rust-version = "1.88"
+rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
 repository   = "https://github.com/LiGoldragon/signal-introspect"
 description  = "Signal contract for Persona introspection query and projection envelopes."
 publish      = false
+links        = "signal-introspect"
+build        = "build.rs"
 
 [lib]
 name = "signal_introspect"
@@ -14,16 +16,19 @@ path = "src/lib.rs"
 
 [features]
 default   = ["nota-text"]
-nota-text = ["signal-frame/nota-text"]
+nota-text = ["dep:nota", "signal-frame/nota-text", "signal-message/nota-text", "signal-persona/nota-text"]
 
 [dependencies]
-nota = { package = "nota", git = "https://github.com/LiGoldragon/nota-next.git", branch = "main" }
-signal-frame             = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
-signal-persona           = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "main", features = ["nota-text"] }
-signal-message           = { git = "https://github.com/LiGoldragon/signal-message.git", branch = "main" }
-triad-runtime            = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
-rkyv                     = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-thiserror                = "2"
+nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main", optional = true }
+signal-frame   = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main", default-features = false }
+signal-persona = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "primary-2v5c.10.1.1-signal-persona-trueschema", default-features = false }
+signal-message = { git = "https://github.com/LiGoldragon/signal-message.git", branch = "primary-2v5c.10.1.3-signal-message-trueschema", default-features = false }
+triad-runtime  = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
+rkyv           = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
+thiserror      = "2"
+
+[build-dependencies]
+schema-rust = { package = "schema-rust", git = "https://github.com/LiGoldragon/schema-rust.git", rev = "886a9009077bdf9ee0e71fa0fa31aaf6e5444dd3" }
 
 [lints.rust]
 unsafe_code = "forbid"

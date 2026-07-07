@@ -40,8 +40,8 @@ crate wraps; it does not redefine.
 - The central introspection request/reply envelope.
 - Query selectors, projection wrappers, and future subscription
   handles.
-- Frame aliases over `signal_frame::Frame<IntrospectionRequest,
-  IntrospectionReply>`.
+- Frame aliases over the schema-rust emitted `signal-frame` exchange
+  frame for `IntrospectionRequest` / `IntrospectionReply`.
 
 ## What this repo does not own
 
@@ -69,8 +69,8 @@ owns the observed state. This crate asks and wraps.
   three fields join one delivery chain; `hop_index` orders events
   without clock sorting.
 - **Every request variant declares a contract-local operation head.**
-  The `signal_channel!` declaration is the source of truth; tests
-  assert the exact heads.
+  `schema/lib.schema` is the source of truth; tests assert the
+  exact heads.
 - **The contract asks and wraps; it does not define component rows.**
   When a peer-component observation lands, the row vocabulary lives
   in the component's own contract crate; this crate wraps via
@@ -80,9 +80,9 @@ owns the observed state. This crate asks and wraps.
 - **Round trips cover every variant.** rkyv length-prefixed frame
   round trips in `tests/round_trip.rs`; canonical NOTA examples in
   `examples/canonical.nota` with a parser test.
-- **Pin upstream contracts via a named API reference.** Cargo deps
-  declare `git = "..."` with a named branch/bookmark, never raw
-  `rev = "..."`.
+- **Use portable TrueSchema producers.** Cargo deps for producer
+  contracts use pushed bookmarks; generator deps may pin the accepted
+  TrueSchema revision.
 
 ## Editing patterns
 
@@ -93,11 +93,13 @@ owns the observed state. This crate asks and wraps.
    observation). The default is "owning component"; this crate wraps.
 2. If it lives here: write the canonical NOTA example for the
    request and the expected reply in `examples/canonical.nota`.
-3. Declare the payload and reply variant in `src/lib.rs`.
-4. Add the variant to the `signal_channel!` declaration as a
-   contract-local operation head.
-5. Add the rkyv and NOTA round-trip witnesses.
-6. Update `ARCHITECTURE.md`.
+3. Declare the payload and reply variant in `schema/lib.schema`.
+4. Regenerate checked-in schema artifacts with
+   `SIGNAL_INTROSPECT_UPDATE_SCHEMA_ARTIFACTS=1`.
+5. Add compatibility methods in `src/lib.rs` only when consumers need
+   ergonomic constructors or accessors.
+6. Add the rkyv and NOTA round-trip witnesses.
+7. Update `ARCHITECTURE.md`.
 
 ### Modeling "not yet observed"
 
@@ -126,9 +128,10 @@ Wait until `sema-engine` per-peer commit-then-emit gates land
 (Slice 3 territory). When it does:
 
 1. Read `~/primary/skills/subscription-lifecycle.md` end-to-end.
-2. Declare the `stream` block in `signal_channel!` with both a
-   request-side `Retract <Name>Retraction(<Token>)` variant and a
-   reply-side `SubscriptionRetracted` variant.
+2. Declare the stream shape in `schema/lib.schema` once the
+   TrueSchema stream vocabulary is accepted, including a request-side
+   `Retract <Name>Retraction(<Token>)` variant and a reply-side
+   `SubscriptionRetracted` variant.
 3. Witness the full subscribe → event → retract → ack → end
    lifecycle.
 
@@ -138,11 +141,12 @@ non-functional feature.
 
 ## NOTA codec shape
 
-The `signal_channel!` macro emits a request variant's NOTA head as
-the operation head. For
-example, `IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { .. })`
-encodes as `(PrototypeWitness (...))`. Canonical examples and
-round-trip tests use the operation heads.
+TrueSchema emits a request variant's NOTA head as the operation
+head. Single-field query payloads encode as bare values, so
+`PrototypeWitnessQuery::new(engine)` encodes as
+`(PrototypeWitness prototype)`; multi-field query payloads encode as
+tag-less records such as `(ComponentSnapshot (prototype Router))`.
+Canonical examples and round-trip tests use the operation heads.
 
 ## See also
 

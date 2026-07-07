@@ -3,8 +3,9 @@
 ;; One example per request variant followed by one example per reply
 ;; variant. Per the three-case PascalCase rule, each data-carrying
 ;; enum variant on the wire is `(VariantName <payload>)`; the inner
-;; payload is a NotaEncode/NotaDecode-derived struct encoded as a tag-less
-;; `(fields…)`. The outer head names the *Request / *Reply variant
+;; payload is a NotaEncode/NotaDecode-derived value; single-field query
+;; payloads encode as a bare value and multi-field records encode as
+;; tag-less `(fields…)`. The outer head names the *Request / *Reply variant
 ;; (e.g. `EngineSnapshot`), which can differ from the payload type
 ;; name (e.g. `EngineSnapshotQuery`).
 ;;
@@ -18,7 +19,7 @@
 ;; ─── Requests ─────────────────────────────────────────────────────
 
 ;; IntrospectionRequest::EngineSnapshot
-(EngineSnapshot (prototype))
+(EngineSnapshot prototype)
 
 ;; IntrospectionRequest::ComponentSnapshot
 (ComponentSnapshot (prototype Router))
@@ -27,7 +28,7 @@
 (DeliveryTrace (prototype 7 Message))
 
 ;; IntrospectionRequest::PrototypeWitness
-(PrototypeWitness (prototype))
+(PrototypeWitness prototype)
 
 ;; ─── Replies ──────────────────────────────────────────────────────
 

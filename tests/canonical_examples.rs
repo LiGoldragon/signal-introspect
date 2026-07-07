@@ -34,27 +34,27 @@ fn component_name(value: &str) -> ComponentName {
 fn canonical_request_examples_round_trip() {
     let expected: Vec<(IntrospectionRequest, &str)> = vec![
         (
-            IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery { engine: engine() }),
-            "(EngineSnapshot (prototype))",
+            IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery::new(engine())),
+            "(EngineSnapshot prototype)",
         ),
         (
             IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
-                engine: engine(),
-                target: IntrospectionTarget::Router,
+                engine_identifier: engine(),
+                introspection_target: IntrospectionTarget::Router,
             }),
             "(ComponentSnapshot (prototype Router))",
         ),
         (
             IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
-                engine: engine(),
+                engine_identifier: engine(),
                 message_identifier: MessageIdentifier::new(7),
-                originator: component_name("Message"),
+                component_name: component_name("Message"),
             }),
             "(DeliveryTrace (prototype 7 Message))",
         ),
         (
-            IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { engine: engine() }),
-            "(PrototypeWitness (prototype))",
+            IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery::new(engine())),
+            "(PrototypeWitness prototype)",
         ),
     ];
 
@@ -86,17 +86,17 @@ fn canonical_reply_examples_round_trip() {
         ),
         (
             IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
-                engine: engine(),
-                target: IntrospectionTarget::Router,
-                readiness: Some(ComponentReadiness::Ready),
+                engine_identifier: engine(),
+                introspection_target: IntrospectionTarget::Router,
+                optional_component_readiness: Some(ComponentReadiness::Ready),
             }),
             "(ComponentSnapshot (prototype Router (Some Ready)))",
         ),
         (
             IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
-                engine: engine(),
-                target: IntrospectionTarget::Router,
-                readiness: None,
+                engine_identifier: engine(),
+                introspection_target: IntrospectionTarget::Router,
+                optional_component_readiness: None,
             }),
             "(ComponentSnapshot (prototype Router None))",
         ),
@@ -129,35 +129,36 @@ fn canonical_reply_examples_round_trip() {
         ),
         (
             IntrospectionReply::PrototypeWitness(PrototypeWitness {
-                engine: engine(),
+                engine_identifier: engine(),
                 manager_seen: Some(ComponentReadiness::Ready),
                 router_seen: Some(ComponentReadiness::Ready),
                 terminal_seen: Some(ComponentReadiness::Ready),
-                delivery_status: Some(DeliveryTraceStatus::Routed),
+                optional_delivery_trace_status: Some(DeliveryTraceStatus::Routed),
             }),
             "(PrototypeWitness (prototype (Some Ready) (Some Ready) (Some Ready) (Some Routed)))",
         ),
         (
             IntrospectionReply::PrototypeWitness(PrototypeWitness {
-                engine: engine(),
+                engine_identifier: engine(),
                 manager_seen: None,
                 router_seen: None,
                 terminal_seen: None,
-                delivery_status: None,
+                optional_delivery_trace_status: None,
             }),
             "(PrototypeWitness (prototype None None None None))",
         ),
         (
             IntrospectionReply::Unimplemented(IntrospectionUnimplemented {
-                scope: IntrospectionScope::EngineSnapshot,
-                reason: IntrospectionUnimplementedReason::NotInPrototypeScope,
+                introspection_scope: IntrospectionScope::EngineSnapshot,
+                introspection_unimplemented_reason:
+                    IntrospectionUnimplementedReason::NotInPrototypeScope,
             }),
             "(Unimplemented (EngineSnapshot NotInPrototypeScope))",
         ),
         (
             IntrospectionReply::Denied(IntrospectionDenied {
-                scope: IntrospectionScope::ComponentSnapshot,
-                reason: IntrospectionDeniedReason::NotAuthorized,
+                introspection_scope: IntrospectionScope::ComponentSnapshot,
+                introspection_denied_reason: IntrospectionDeniedReason::NotAuthorized,
             }),
             "(Denied (ComponentSnapshot NotAuthorized))",
         ),

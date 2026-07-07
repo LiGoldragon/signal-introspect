@@ -1,0 +1,85 @@
+;; signal-introspect — central Signal envelope contract for Persona
+;; introspection query and projection data.
+;;
+;; Wire-only: emits rkyv + optional NOTA codecs, route witnesses, short
+;; headers, and signal-frame helpers. Runtime actors, peer fan-out, stores,
+;; socket binding, authorization, and projection policy live in introspect.
+;; Component-specific observation rows live in their owning contracts; this
+;; crate asks and wraps.
+
+{
+  ComponentName signal-persona:lib:ComponentName
+  EngineIdentifier signal-persona:lib:EngineIdentifier
+  OwnerIdentity signal-persona:lib:OwnerIdentity
+  MessageIdentifier signal-message:lib:MessageSlot
+}
+[(EngineSnapshot EngineSnapshotQuery)
+ (ComponentSnapshot ComponentSnapshotQuery)
+ (DeliveryTrace DeliveryTraceQuery)
+ (PrototypeWitness PrototypeWitnessQuery)
+ (ComponentTrace ComponentTraceQuery)]
+[(EngineSnapshot EngineSnapshot)
+ (ComponentSnapshot ComponentSnapshot)
+ (DeliveryTrace DeliveryTrace)
+ (PrototypeWitness PrototypeWitness)
+ (ComponentTrace ComponentTrace)
+ (Unimplemented IntrospectionUnimplemented)
+ (Denied IntrospectionDenied)]
+{
+  IntrospectionTarget [EngineManager Mind Message Router Spirit System Harness Terminal Introspect Signal]
+  IntrospectionScope [EngineSnapshot ComponentSnapshot DeliveryTrace PrototypeWitness]
+
+  EngineSnapshotQuery { EngineIdentifier }
+  ComponentSnapshotQuery { EngineIdentifier IntrospectionTarget }
+  DeliveryTraceQuery { EngineIdentifier MessageIdentifier ComponentName }
+  PrototypeWitnessQuery { EngineIdentifier }
+
+  ObservedComponents (Vector IntrospectionTarget)
+  EngineSnapshot { EngineIdentifier ObservedComponents }
+  ComponentSnapshot { EngineIdentifier IntrospectionTarget (Optional ComponentReadiness) }
+  ComponentReadiness [Ready NotReady]
+
+  HopIndex u32
+  DeliveryTraceJoinKey { EngineIdentifier MessageIdentifier ComponentName }
+  DeliveryTraceKey { EngineIdentifier MessageIdentifier ComponentName HopIndex }
+  DeliveryTraceEvent { DeliveryTraceKey ComponentName DeliveryTraceStatus }
+  DeliveryTraceEvents (Vector DeliveryTraceEvent)
+  DeliveryTrace { EngineIdentifier MessageIdentifier ComponentName DeliveryTraceEvents }
+  DeliveryTraceStatus [Accepted Routed Delivered Deferred Failed]
+
+  PrototypeWitness {
+    EngineIdentifier
+    manager_seen.(Optional ComponentReadiness)
+    router_seen.(Optional ComponentReadiness)
+    terminal_seen.(Optional ComponentReadiness)
+    (Optional DeliveryTraceStatus)
+  }
+
+  IntrospectionUnimplemented { IntrospectionScope IntrospectionUnimplementedReason }
+  IntrospectionUnimplementedReason [NotInPrototypeScope ComponentObservationMissing SubscriptionNotImplemented]
+  IntrospectionDenied { IntrospectionScope IntrospectionDeniedReason }
+  IntrospectionDeniedReason [NotAuthorized Redacted]
+
+  TraceEventName String
+  TraceSequence u64
+  TraceLayer [Signal Nexus Sema Authorization]
+  ComponentTraceEvent { EngineIdentifier IntrospectionTarget TraceLayer TraceEventName TraceSequence }
+  ComponentTraceQuery { EngineIdentifier IntrospectionTarget (Optional TraceEventName) }
+  ComponentTraceEvents (Vector ComponentTraceEvent)
+  ComponentTrace { EngineIdentifier IntrospectionTarget ComponentTraceEvents }
+
+  WirePath String
+  SocketMode u64
+  IntrospectDaemonConfiguration {
+    introspect_socket_path.WirePath
+    introspect_socket_mode.SocketMode
+    supervision_socket_path.WirePath
+    supervision_socket_mode.SocketMode
+    store_path.WirePath
+    manager_socket_path.WirePath
+    router_socket_path.WirePath
+    terminal_socket_path.WirePath
+    trace_socket_path.WirePath
+    OwnerIdentity
+  }
+}
