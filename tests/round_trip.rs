@@ -256,6 +256,9 @@ fn introspection_request_heads_are_contract_local_operations() {
             "DeliveryTrace",
             "PrototypeWitness",
             "ComponentTrace",
+            "RecordSystemEvent",
+            "SystemEvents",
+            "FlushSystemEvents",
         ]
     );
 }

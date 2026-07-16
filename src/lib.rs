@@ -12,6 +12,9 @@ use signal_frame::signal_channel;
 pub use signal_message::MessageSlot as MessageIdentifier;
 use signal_persona::{ComponentName, EngineIdentifier, OwnerIdentity};
 
+mod system_event;
+pub use system_event::*;
+
 #[derive(
     Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
 )]
@@ -879,6 +882,9 @@ signal_channel! {
         operation DeliveryTrace(DeliveryTraceQuery),
         operation PrototypeWitness(PrototypeWitnessQuery),
         operation ComponentTrace(ComponentTraceQuery),
+        operation RecordSystemEvent(RecordSystemEvent),
+        operation SystemEvents(SystemEventsQuery),
+        operation FlushSystemEvents(FlushSystemEvents),
     }
     reply IntrospectionReply {
         EngineSnapshot(EngineSnapshot),
@@ -886,6 +892,9 @@ signal_channel! {
         DeliveryTrace(DeliveryTrace),
         PrototypeWitness(PrototypeWitness),
         ComponentTrace(ComponentTrace),
+        SystemEventAccepted(SystemEventAccepted),
+        SystemEvents(SystemEvents),
+        SystemEventsFlushed(SystemEventsFlushed),
         Unimplemented(IntrospectionUnimplemented),
         Denied(IntrospectionDenied),
     }

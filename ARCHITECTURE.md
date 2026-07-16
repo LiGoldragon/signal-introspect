@@ -17,11 +17,12 @@ fan-out, and projection logic live in `introspect`.
 
 ## Migration history — signal-frame operation heads (2026-06-07)
 
-The public wire no longer carries `SignalVerb::Match`. The four
-introspection reads are now bare contract-local operation heads:
-`EngineSnapshot`, `ComponentSnapshot`, `DeliveryTrace`, and
-`PrototypeWitness`. Sema classification is daemon-side projection
-only.
+The public wire no longer carries `SignalVerb::Match`. Introspection reads and
+targeted event admission/flush use bare contract-local operation heads. The
+system-event slice appends `RecordSystemEvent`, `SystemEvents`, and
+`FlushSystemEvents` after the existing operation variants; existing
+`ComponentTraceEvent` archives and operation discriminants are unchanged. Sema
+classification is daemon-side projection only.
 
 This crate depends on `signal-frame` for length-prefixed rkyv framing.
 It still owns only wire vocabulary and codecs; it does not own daemon
@@ -77,6 +78,14 @@ subscription variants.
 - Reply records that wrap or summarize observations for projection.
 - Contract-local verbs declared in the `signal_channel!` invocation;
   Sema classification (Layer 3) is daemon-side projection only.
+- Targeted system-event vocabulary: a recursive domain → target → topic →
+  curated event/error hierarchy; typed journal/application provenance and trust;
+  extractor and policy revisions; boot-local identity; and a 512-byte bounded
+  UTF-8 payload that retains truncation status and original byte length without
+  retaining a fallback body.
+- Exact-duplicate identity and summary records. Identity excludes timestamps and
+  representative identifiers; similarity, sampling, cooldown, token-bucket,
+  debounce, and recurring-pattern policy are deliberately not part of this type.
 
 Typed component targets and trace layers include Spirit authorization
 observations: a traced `spirit` daemon exposes the criome
@@ -185,7 +194,24 @@ the operation head. For example,
 encodes as `(PrototypeWitness (...))`. Canonical examples and
 round-trip tests carry the operation heads.
 
-## 7 · Status
+## 7 · Compatibility
+
+The rkyv/Signal enums are closed. Appending variants preserves the archive shape
+and discriminants of all pre-existing variants, so current
+`ComponentTraceEvent` producers and readers continue to exchange their existing
+record unchanged. A new producer must not send a new operation to an old reader:
+the codec validates and rejects unknown enum discriminants and cannot preserve
+or round-trip an unknown future variant. Compatibility tests therefore witness
+old-variant and new-variant round trips separately rather than claiming unknown
+variant passthrough.
+
+The targeted event types store no command line, environment, machine identity,
+network address, arbitrary path, or free-form correlation identifier. The boot
+identifier is a fixed-width typed pair used only to partition a boot. An
+unclassified targeted observation validates only with a typed status and no
+payload.
+
+## 8 · Status
 
 The crate is the central envelope vocabulary today. The
 `ComponentObservations` and `ListRecordKinds` envelope extensions
@@ -195,7 +221,7 @@ declared; until then this crate has no subscription variants and no
 `Unimplemented`-stub variant that would force consumers to write
 shadow code for a missing feature.
 
-## 8 · Non-ownership
+## 9 · Non-ownership
 
 - No introspection daemon — that is `introspect`.
 - No router tables, terminal session records, manager event-log
@@ -211,7 +237,7 @@ vocabulary becomes heavy or high-churn — per
 `~/primary/skills/contract-repo.md` §"Contracts name a component's
 wire surface".
 
-## 9 · Code map
+## 10 · Code map
 
 ```text
 src/
