@@ -182,6 +182,21 @@ impl BoundedPayload {
     pub const fn original_byte_length(&self) -> u64 {
         self.original_byte_length
     }
+
+    pub fn validate(&self) -> Result<(), SystemEventValidationError> {
+        let retained = self.text.len() as u64;
+        let valid_length = self.text.len() <= MAXIMUM_BOUNDED_PAYLOAD_BYTES;
+        let valid_truncation = if self.truncated {
+            self.original_byte_length > retained
+        } else {
+            self.original_byte_length == retained
+        };
+        if valid_length && valid_truncation {
+            Ok(())
+        } else {
+            Err(SystemEventValidationError::InvalidBoundedPayload)
+        }
+    }
 }
 
 #[derive(
@@ -645,6 +660,9 @@ pub struct SystemEvent {
 
 impl SystemEvent {
     pub fn validate(&self) -> Result<(), SystemEventValidationError> {
+        if let Some(payload) = &self.payload {
+            payload.validate()?;
+        }
         if !self.provenance.is_consistent() {
             return Err(SystemEventValidationError::InconsistentProvenance);
         }
@@ -669,6 +687,8 @@ impl SystemEvent {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum SystemEventValidationError {
+    #[error("bounded payload exceeds 512 bytes or carries inconsistent truncation metadata")]
+    InvalidBoundedPayload,
     #[error("event source and trust classification are inconsistent")]
     InconsistentProvenance,
     #[error("targeted unclassified events may retain counters/status only, never payload text")]

@@ -69,6 +69,20 @@ fn bounded_payload_preserves_short_unicode_and_reports_original_length() {
 }
 
 #[test]
+fn decoded_payload_metadata_must_preserve_the_bound_invariant() {
+    let valid = BoundedPayload::from_redacted_allowlisted("short");
+    let invalid_text = valid.to_nota().replace("False 5", "False 6");
+    let decoded = NotaSource::new(&invalid_text)
+        .parse::<BoundedPayload>()
+        .expect("decode deliberately inconsistent payload fixture");
+
+    assert!(
+        decoded.validate().is_err(),
+        "fixture did not invalidate payload: {invalid_text}"
+    );
+}
+
+#[test]
 fn targeted_unclassified_input_rejects_a_durable_message_preview() {
     let event = SystemEventFixture::event(
         1,
