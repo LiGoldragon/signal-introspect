@@ -15,17 +15,8 @@ own owning component contracts, so this crate never becomes a shared
 schema bucket. Runtime actors, the sema-engine store, peer-subscription
 fan-out, and projection logic live in `introspect`.
 
-## Migration history — signal-frame operation heads (2026-06-07)
-
-The public wire no longer carries `SignalVerb::Match`. Introspection reads and
-targeted event admission/flush use bare contract-local operation heads. The
-system-event slice appends `RecordSystemEvent`, `SystemEvents`, and
-`FlushSystemEvents` after the existing operation variants; existing
-`ComponentTraceEvent` archives and operation discriminants are unchanged. Sema
-classification is daemon-side projection only.
-
 This crate depends on `signal-frame` for length-prefixed rkyv framing.
-It still owns only wire vocabulary and codecs; it does not own daemon
+It owns only wire vocabulary and codecs; it does not own daemon
 actors, store tables, sockets, or peer fan-out.
 
 It is **not** a shared row bucket — component-specific observation
@@ -171,39 +162,30 @@ label is computed at observation publish time inside the daemon.
 |---|---|
 | The central contract asks and wraps; it does not define component rows. | Public type review: no router/terminal/manager row vocabulary defined here. Source-scan witness names "central contract does not define peer rows." |
 | Every request/reply travels as a Signal frame. | `tests/round_trip.rs` length-prefixed frame tests per variant. |
-| Every `IntrospectionRequest` variant is a contract-local verb in verb form. | The `signal_channel!` declaration names each verb; round-trip tests assert each variant's NOTA head. Sema classification is daemon-side projection only. |
+| Every `IntrospectionRequest` variant is a contract-local verb in verb form. | The `signal_channel!` declaration names each verb; round-trip tests assert each variant's Dotos head. Sema classification is daemon-side projection only. |
 | Read-shaped payloads project to Sema `Match` / `Subscribe`; write-shaped payloads project to `Assert` / `Mutate` / `Retract`. | Daemon-side `ToSemaOperation` impl is the witness; today all read-shaped operations project to `Match`. |
-| NOTA derives live on the same typed records. | Cargo tests compile `nota` `NotaEncode` and `NotaDecode` derives; canonical examples round-trip the text form. |
+| Dotos derives live on the same typed records. | Cargo tests compile `dotos` `DotosEncode` and `DotosDecode` derives; canonical examples round-trip the text form. |
 | The contract contains no daemon code. | Source scan: no Kameo, Tokio, socket, or storage code. |
 | Wire enums contain no `Unknown` variant. | `tests/round_trip.rs::introspection_status_enums_are_closed_no_unknown_variants` exhaustively matches every `ComponentReadiness` and `DeliveryTraceStatus` variant. Adding an `Unknown` variant breaks the match. |
 | Any record name containing the word `Unknown` represents a positive "entity not in our state" rejection, not a polling-shape escape hatch. | This crate has no `Unknown*` record names today; the "not observed yet" axis lives on `Option<>` wrappers on the carrier records. |
 | The "not yet observed" axis lives on `Option<>` wrappers, never inside a closed status enum. | `prototype_witness_reply_round_trips_with_no_observations_yet` exercises the all-`None` carrier shape end-to-end through the length-prefixed frame. |
 | Delivery trace correlation uses the four-field key `(engine, message_identifier, originator, hop_index)`. | `tests/round_trip.rs::delivery_trace_key_round_trips_with_four_correlation_fields` proves the key rides the contract reply. |
-| Each variant's NOTA head matches the contract-local verb declared in `signal_channel!`. | The macro generates the codec; round-trip tests assert each variant's NOTA head. |
+| Each variant's Dotos head matches the contract-local verb declared in `signal_channel!`. | The macro generates the codec; round-trip tests assert each variant's Dotos head. |
 | Round-trip witnesses cover every variant in rkyv. | `tests/round_trip.rs` exercises every request and reply variant through `Frame::encode_length_prefixed` / `decode_length_prefixed`. |
-| Round-trip witnesses cover every variant in NOTA. | `examples/canonical.nota` holds one canonical text example per request/reply variant; round-trip tests parse and re-emit each. |
+| Round-trip witnesses cover every variant in Dotos. | `examples/canonical.dotos` holds one canonical text example per request/reply variant; round-trip tests parse and re-emit each. |
 | No stringly-typed dispatch (`match s.as_str()`) for closed-set states. | All status/scope/reason fields are typed closed enums. |
 | Request payloads carry query target and scope only; they mint no sequence numbers, snapshot timestamps, or correlation identity. | Public type review: request `*Query` records carry no daemon-minted fields; `introspect` supplies those at observation time. |
-| Contract crate dependencies use a named API reference (branch or tag), not a raw revision pin. | `Cargo.toml` review: `signal-frame` and downstream contract crates declare `git = "..."` with a named-branch shape; raw `rev = "..."` pins are not used. |
+| Git dependencies resolve to immutable producer identities. | Every Git dependency in `Cargo.toml` declares an exact `rev`; no dependency follows a moving branch. |
 
-## 6 · NOTA codec shape on `signal_channel!` operation heads
+## 6 · Dotos codec shape on `signal_channel!` operation heads
 
-The `signal_channel!` macro emits a request variant's NOTA head as
+The `signal_channel!` macro emits a request variant's Dotos head as
 the operation head. For example,
 `IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { .. })`
-encodes as `(PrototypeWitness (...))`. Canonical examples and
+encodes as `(PrototypeWitness {...})`. Canonical examples and
 round-trip tests carry the operation heads.
 
-## 7 · Compatibility
-
-The rkyv/Signal enums are closed. Appending variants preserves the archive shape
-and discriminants of all pre-existing variants, so current
-`ComponentTraceEvent` producers and readers continue to exchange their existing
-record unchanged. A new producer must not send a new operation to an old reader:
-the codec validates and rejects unknown enum discriminants and cannot preserve
-or round-trip an unknown future variant. Compatibility tests therefore witness
-old-variant and new-variant round trips separately rather than claiming unknown
-variant passthrough.
+## 7 · Data boundary
 
 The targeted event types store no command line, environment, machine identity,
 network address, arbitrary path, or free-form correlation identifier. The boot
@@ -241,11 +223,12 @@ wire surface".
 
 ```text
 src/
-└── lib.rs                — payloads + signal_channel! invocation
+├── lib.rs                — payloads + signal_channel! invocation
+└── system_event.rs       — typed system-event vocabulary and Dotos boundary
 examples/
-└── canonical.nota         — one canonical example per request/reply variant
+└── canonical.dotos       — one canonical example per request/reply variant
 tests/
-└── round_trip.rs          — per-variant frame round trips + NOTA witnesses
+└── round_trip.rs          — per-variant frame round trips + Dotos witnesses
                              + closed-enum + operation-head witnesses
                              + canonical examples parser
 ```

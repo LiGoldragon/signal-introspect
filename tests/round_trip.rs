@@ -1,17 +1,18 @@
-use nota::NotaEncode;
+use dotos::DotosEncode;
 use signal_frame::{
-    ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
-    SignalOperationHeads, SubReply,
+    ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, RootCode,
+    SessionEpoch, SignalOperationHeads, SubReply, VariantCode, WireRoute,
 };
 use signal_introspect::{
     ComponentReadiness, ComponentSnapshot, ComponentSnapshotQuery, ComponentTrace,
     ComponentTraceEvent, ComponentTraceQuery, DeliveryTrace, DeliveryTraceEvent, DeliveryTraceKey,
     DeliveryTraceQuery, DeliveryTraceStatus, EngineSnapshot, EngineSnapshotQuery, HopIndex,
     IntrospectionFrame as Frame, IntrospectionFrameBody as FrameBody, IntrospectionReply,
-    IntrospectionRequest, IntrospectionTarget, MessageIdentifier, PrototypeWitness,
-    PrototypeWitnessQuery, SocketMode, TraceEventName, TraceLayer, TraceSequence, WirePath,
+    IntrospectionRequest, IntrospectionTarget, PrototypeWitness, PrototypeWitnessQuery, SocketMode,
+    TraceEventName, TraceLayer, TraceSequence, WirePath,
 };
-use signal_persona::{ComponentName, EngineIdentifier};
+use signal_message::schema::lib::z2VLZR;
+use signal_persona::schema::lib::{z2VRuG, z2VUT8};
 
 fn exchange() -> ExchangeIdentifier {
     ExchangeIdentifier::new(
@@ -21,15 +22,20 @@ fn exchange() -> ExchangeIdentifier {
     )
 }
 
-fn component_name(value: &str) -> ComponentName {
-    ComponentName::new(value)
+fn component_name(value: &str) -> z2VUT8 {
+    z2VUT8::new(value.to_owned())
 }
 
 fn round_trip_request(request: IntrospectionRequest) {
-    let frame = Frame::new(FrameBody::Request {
-        exchange: exchange(),
-        request: request.clone().into_request(),
-    });
+    let request_payload = request.clone().into_request();
+    let route = request_payload.route().expect("operation route");
+    let frame = Frame::new(
+        route,
+        FrameBody::Request {
+            exchange: exchange(),
+            request: request_payload,
+        },
+    );
 
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = Frame::decode_length_prefixed(&bytes).expect("decode");
@@ -46,10 +52,13 @@ fn round_trip_request(request: IntrospectionRequest) {
 }
 
 fn round_trip_reply(reply: IntrospectionReply) -> IntrospectionReply {
-    let frame = Frame::new(FrameBody::Reply {
-        exchange: exchange(),
-        reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply))),
-    });
+    let frame = Frame::new(
+        WireRoute::new(RootCode::new(0), VariantCode::new(0)),
+        FrameBody::Reply {
+            exchange: exchange(),
+            reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply))),
+        },
+    );
 
     let bytes = frame.encode_length_prefixed().expect("encode");
     let decoded = Frame::decode_length_prefixed(&bytes).expect("decode");
@@ -69,7 +78,7 @@ fn round_trip_reply(reply: IntrospectionReply) -> IntrospectionReply {
 #[test]
 fn engine_snapshot_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::EngineSnapshot(EngineSnapshotQuery {
-        engine: EngineIdentifier::new("prototype"),
+        engine: z2VRuG::new("prototype".to_owned()),
     });
     round_trip_request(request);
 }
@@ -77,7 +86,7 @@ fn engine_snapshot_query_round_trips_through_length_prefixed_frame() {
 #[test]
 fn component_snapshot_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::ComponentSnapshot(ComponentSnapshotQuery {
-        engine: EngineIdentifier::new("prototype"),
+        engine: z2VRuG::new("prototype".to_owned()),
         target: IntrospectionTarget::Router,
     });
     round_trip_request(request);
@@ -86,8 +95,8 @@ fn component_snapshot_query_round_trips_through_length_prefixed_frame() {
 #[test]
 fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::DeliveryTrace(DeliveryTraceQuery {
-        engine: EngineIdentifier::new("prototype"),
-        message_identifier: MessageIdentifier::new(7),
+        engine: z2VRuG::new("prototype".to_owned()),
+        message_identifier: z2VLZR::new(7),
         originator: component_name("Message"),
     });
     round_trip_request(request);
@@ -96,7 +105,7 @@ fn delivery_trace_query_round_trips_through_length_prefixed_frame() {
 #[test]
 fn component_trace_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::ComponentTrace(ComponentTraceQuery::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         Some(TraceEventName::new("SignalAdmitted")),
     ));
@@ -106,7 +115,7 @@ fn component_trace_query_round_trips_through_length_prefixed_frame() {
 #[test]
 fn component_trace_query_round_trips_with_no_event_name_filter() {
     let request = IntrospectionRequest::ComponentTrace(ComponentTraceQuery::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         None,
     ));
@@ -117,14 +126,14 @@ fn component_trace_query_round_trips_with_no_event_name_filter() {
 fn component_trace_reply_round_trips_through_length_prefixed_frame() {
     let events = vec![
         ComponentTraceEvent::new(
-            EngineIdentifier::new("prototype"),
+            z2VRuG::new("prototype".to_owned()),
             IntrospectionTarget::Signal,
             TraceLayer::Signal,
             TraceEventName::new("SignalAdmitted"),
             TraceSequence::new(0),
         ),
         ComponentTraceEvent::new(
-            EngineIdentifier::new("prototype"),
+            z2VRuG::new("prototype".to_owned()),
             IntrospectionTarget::Signal,
             TraceLayer::Sema,
             TraceEventName::new("SemaWriteApplied"),
@@ -132,7 +141,7 @@ fn component_trace_reply_round_trips_through_length_prefixed_frame() {
         ),
     ];
     let reply = IntrospectionReply::ComponentTrace(ComponentTrace::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         events.clone(),
     ));
@@ -156,7 +165,7 @@ fn component_trace_event_round_trips_through_trace_event_frame() {
     use triad_runtime::trace::TraceEventFrame;
 
     let event = ComponentTraceEvent::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         TraceLayer::Nexus,
         TraceEventName::new("NexusEntered"),
@@ -175,7 +184,7 @@ fn spirit_authorization_trace_event_round_trips_through_trace_event_frame() {
     use triad_runtime::trace::TraceEventFrame;
 
     let event = ComponentTraceEvent::new(
-        EngineIdentifier::new("spirit"),
+        z2VRuG::new("spirit".to_owned()),
         IntrospectionTarget::Spirit,
         TraceLayer::Authorization,
         TraceEventName::new("AuthorizationObserved"),
@@ -190,21 +199,21 @@ fn spirit_authorization_trace_event_round_trips_through_trace_event_frame() {
 }
 
 #[test]
-fn component_trace_event_displays_as_nota() {
+fn component_trace_event_displays_as_dotos() {
     let event = ComponentTraceEvent::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         TraceLayer::Signal,
         TraceEventName::new("SignalAdmitted"),
         TraceSequence::new(7),
     );
-    assert_eq!(event.to_string(), event.to_nota());
+    assert_eq!(event.to_string(), event.to_dotos());
 }
 
 #[test]
 fn component_trace_query_filter_matches_by_component_and_event_name() {
     let event = ComponentTraceEvent::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         TraceLayer::Signal,
         TraceEventName::new("SignalAdmitted"),
@@ -212,22 +221,22 @@ fn component_trace_query_filter_matches_by_component_and_event_name() {
     );
 
     let unfiltered = ComponentTraceQuery::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         None,
     );
     let matching_name = ComponentTraceQuery::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         Some(TraceEventName::new("SignalAdmitted")),
     );
     let other_name = ComponentTraceQuery::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Signal,
         Some(TraceEventName::new("NexusEntered")),
     );
     let other_component = ComponentTraceQuery::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         IntrospectionTarget::Router,
         None,
     );
@@ -241,7 +250,7 @@ fn component_trace_query_filter_matches_by_component_and_event_name() {
 #[test]
 fn prototype_witness_query_round_trips_through_length_prefixed_frame() {
     let request = IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery {
-        engine: EngineIdentifier::new("prototype"),
+        engine: z2VRuG::new("prototype".to_owned()),
     });
     round_trip_request(request);
 }
@@ -266,7 +275,7 @@ fn introspection_request_heads_are_contract_local_operations() {
 #[test]
 fn prototype_witness_reply_round_trips_through_length_prefixed_frame() {
     let reply = IntrospectionReply::PrototypeWitness(PrototypeWitness {
-        engine: EngineIdentifier::new("prototype"),
+        engine: z2VRuG::new("prototype".to_owned()),
         manager_seen: Some(ComponentReadiness::Ready),
         router_seen: Some(ComponentReadiness::Ready),
         terminal_seen: Some(ComponentReadiness::Ready),
@@ -282,7 +291,7 @@ fn prototype_witness_reply_round_trips_with_no_observations_yet() {
     // Option<>. Adding back an `Unknown` variant on either inner enum
     // would defeat the closed-enum integrity test below.
     let reply = IntrospectionReply::PrototypeWitness(PrototypeWitness {
-        engine: EngineIdentifier::new("prototype"),
+        engine: z2VRuG::new("prototype".to_owned()),
         manager_seen: None,
         router_seen: None,
         terminal_seen: None,
@@ -294,7 +303,7 @@ fn prototype_witness_reply_round_trips_with_no_observations_yet() {
 #[test]
 fn component_observations_are_wrapped_not_defined_here() {
     let engine_reply = IntrospectionReply::EngineSnapshot(EngineSnapshot::new(
-        EngineIdentifier::new("prototype"),
+        z2VRuG::new("prototype".to_owned()),
         vec![
             IntrospectionTarget::EngineManager,
             IntrospectionTarget::Router,
@@ -302,18 +311,18 @@ fn component_observations_are_wrapped_not_defined_here() {
         ],
     ));
     let component_reply = IntrospectionReply::ComponentSnapshot(ComponentSnapshot {
-        engine: EngineIdentifier::new("prototype"),
+        engine: z2VRuG::new("prototype".to_owned()),
         target: IntrospectionTarget::Router,
         readiness: Some(ComponentReadiness::Ready),
     });
     let trace_reply = IntrospectionReply::DeliveryTrace(DeliveryTrace::new(
-        EngineIdentifier::new("prototype"),
-        MessageIdentifier::new(7),
+        z2VRuG::new("prototype".to_owned()),
+        z2VLZR::new(7),
         component_name("Message"),
         vec![DeliveryTraceEvent::new(
             DeliveryTraceKey::new(
-                EngineIdentifier::new("prototype"),
-                MessageIdentifier::new(7),
+                z2VRuG::new("prototype".to_owned()),
+                z2VLZR::new(7),
                 component_name("Message"),
                 HopIndex::new(1),
             ),
@@ -336,14 +345,14 @@ fn component_observations_are_wrapped_not_defined_here() {
 #[test]
 fn delivery_trace_key_round_trips_with_four_correlation_fields() {
     let trace_key = DeliveryTraceKey::new(
-        EngineIdentifier::new("prototype"),
-        MessageIdentifier::new(7),
+        z2VRuG::new("prototype".to_owned()),
+        z2VLZR::new(7),
         component_name("Message"),
         HopIndex::new(3),
     );
     let reply = IntrospectionReply::DeliveryTrace(DeliveryTrace::new(
-        EngineIdentifier::new("prototype"),
-        MessageIdentifier::new(7),
+        z2VRuG::new("prototype".to_owned()),
+        z2VLZR::new(7),
         component_name("Message"),
         vec![DeliveryTraceEvent::new(
             trace_key.clone(),
@@ -357,12 +366,9 @@ fn delivery_trace_key_round_trips_with_four_correlation_fields() {
     assert_eq!(trace_key.next_hop().hop_index.value(), 4);
     assert_eq!(
         trace_key.join_key().engine,
-        EngineIdentifier::new("prototype")
+        z2VRuG::new("prototype".to_owned())
     );
-    assert_eq!(
-        trace_key.join_key().message_identifier,
-        MessageIdentifier::new(7)
-    );
+    assert_eq!(trace_key.join_key().message_identifier, z2VLZR::new(7));
     assert_eq!(trace_key.join_key().originator, component_name("Message"));
 }
 
@@ -399,10 +405,10 @@ fn introspection_status_enums_are_closed_no_unknown_variants() {
 }
 
 #[test]
-fn introspect_daemon_configuration_round_trips_through_nota_text() {
-    use nota::{NotaEncode, NotaSource};
+fn introspect_daemon_configuration_round_trips_through_dotos_text() {
+    use dotos::{DotosEncode, DotosSource};
     use signal_introspect::IntrospectDaemonConfiguration;
-    use signal_persona::{OwnerIdentity, UnixUserIdentifier};
+    use signal_persona::schema::lib::{z2VRBs, z2VaTc};
 
     let configuration = IntrospectDaemonConfiguration {
         introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),
@@ -414,11 +420,11 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
         router_socket_path: WirePath::new("/run/persona/X/router.sock"),
         terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
         trace_socket_path: WirePath::new("/run/persona/X/introspect-trace.sock"),
-        owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
+        owner_identity: z2VRBs::z2VWNV(z2VaTc::new(1000)),
     };
 
-    let text = configuration.to_nota();
-    let recovered = NotaSource::new(&text)
+    let text = configuration.to_dotos();
+    let recovered = DotosSource::new(&text)
         .parse::<IntrospectDaemonConfiguration>()
         .expect("decode configuration");
 
@@ -429,7 +435,7 @@ fn introspect_daemon_configuration_round_trips_through_nota_text() {
 #[test]
 fn introspect_daemon_configuration_round_trips_through_rkyv() {
     use signal_introspect::IntrospectDaemonConfiguration;
-    use signal_persona::{OwnerIdentity, UnixUserIdentifier};
+    use signal_persona::schema::lib::{z2VRBs, z2VaTc};
 
     let configuration = IntrospectDaemonConfiguration {
         introspect_socket_path: WirePath::new("/run/persona/X/introspect.sock"),
@@ -441,7 +447,7 @@ fn introspect_daemon_configuration_round_trips_through_rkyv() {
         router_socket_path: WirePath::new("/run/persona/X/router.sock"),
         terminal_socket_path: WirePath::new("/run/persona/X/terminal.sock"),
         trace_socket_path: WirePath::new("/run/persona/X/introspect-trace.sock"),
-        owner_identity: OwnerIdentity::UnixUser(UnixUserIdentifier::new(1000)),
+        owner_identity: z2VRBs::z2VWNV(z2VaTc::new(1000)),
     };
 
     let bytes = configuration.to_rkyv_bytes().expect("archive");

@@ -78,11 +78,10 @@ owns the observed state. This crate asks and wraps.
 - **No runtime code.** No Kameo, Tokio, socket, storage, or daemon glue
   in this crate.
 - **Round trips cover every variant.** rkyv length-prefixed frame
-  round trips in `tests/round_trip.rs`; canonical NOTA examples in
-  `examples/canonical.nota` with a parser test.
-- **Pin upstream contracts via a named API reference.** Cargo deps
-  declare `git = "..."` with a named branch/bookmark, never raw
-  `rev = "..."`.
+  round trips in `tests/round_trip.rs`; canonical Dotos examples in
+  `examples/canonical.dotos` with a parser test.
+- **Pin every Git producer exactly.** Cargo dependencies use immutable
+  `rev = "..."` identities. Moving branches are not build inputs.
 
 ## Editing patterns
 
@@ -91,12 +90,12 @@ owns the observed state. This crate asks and wraps.
 1. Decide whether the answer lives in this crate (a roll-up across
    peers) or in the owning component's contract crate (a peer-owned
    observation). The default is "owning component"; this crate wraps.
-2. If it lives here: write the canonical NOTA example for the
-   request and the expected reply in `examples/canonical.nota`.
+2. If it lives here: write the canonical Dotos example for the
+   request and the expected reply in `examples/canonical.dotos`.
 3. Declare the payload and reply variant in `src/lib.rs`.
 4. Add the variant to the `signal_channel!` declaration as a
    contract-local operation head.
-5. Add the rkyv and NOTA round-trip witnesses.
+5. Add the rkyv and Dotos round-trip witnesses.
 6. Update `ARCHITECTURE.md`.
 
 ### Modeling "not yet observed"
@@ -136,12 +135,12 @@ Do not add an `Unimplemented`-stub `SubscribeComponent` variant in
 the meantime — consumers would write shadow code against a
 non-functional feature.
 
-## NOTA codec shape
+## Dotos codec shape
 
-The `signal_channel!` macro emits a request variant's NOTA head as
+The `signal_channel!` macro emits a request variant's Dotos head as
 the operation head. For
 example, `IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { .. })`
-encodes as `(PrototypeWitness (...))`. Canonical examples and
+encodes as `(PrototypeWitness {...})`. Canonical examples and
 round-trip tests use the operation heads.
 
 ## See also

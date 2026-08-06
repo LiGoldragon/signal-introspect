@@ -1,4 +1,4 @@
-use nota::{NotaEncode, NotaSource};
+use dotos::{DotosEncode, DotosSource};
 use signal_frame::{
     ExchangeIdentifier, ExchangeLane, LaneSequence, NonEmpty, Reply, RequestPayload, SessionEpoch,
     SubReply,
@@ -71,8 +71,8 @@ fn bounded_payload_preserves_short_unicode_and_reports_original_length() {
 #[test]
 fn decoded_payload_metadata_must_preserve_the_bound_invariant() {
     let valid = BoundedPayload::from_redacted_allowlisted("short");
-    let invalid_text = valid.to_nota().replace("False 5", "False 6");
-    let decoded = NotaSource::new(&invalid_text)
+    let invalid_text = valid.to_dotos().replace("False 5", "False 6");
+    let decoded = DotosSource::new(&invalid_text)
         .parse::<BoundedPayload>()
         .expect("decode deliberately inconsistent payload fixture");
 
@@ -125,7 +125,8 @@ fn exact_duplicate_identity_excludes_incidental_identity_and_time() {
 }
 
 #[test]
-fn system_event_operation_round_trips_at_the_nota_projection_boundary() {
+#[cfg(feature = "dotos-text")]
+fn system_event_operation_round_trips_at_the_dotos_projection_boundary() {
     let request = IntrospectionRequest::RecordSystemEvent(RecordSystemEvent {
         event: SystemEventFixture::event(
             7,
@@ -134,10 +135,10 @@ fn system_event_operation_round_trips_at_the_nota_projection_boundary() {
             None,
         ),
     });
-    let text = request.to_nota();
-    let decoded = NotaSource::new(&text)
+    let text = request.to_dotos();
+    let decoded = DotosSource::new(&text)
         .parse::<IntrospectionRequest>()
-        .expect("decode system-event NOTA projection");
+        .expect("decode system-event Dotos projection");
     assert_eq!(decoded, request);
     assert!(text.starts_with("(RecordSystemEvent "));
 }
@@ -153,10 +154,15 @@ fn system_event_ingestion_and_reply_round_trip_as_typed_binary_frames() {
     let request = IntrospectionRequest::RecordSystemEvent(RecordSystemEvent {
         event: event.clone(),
     });
-    let request_frame = IntrospectionFrame::new(IntrospectionFrameBody::Request {
-        exchange: SystemEventFixture::exchange(),
-        request: request.clone().into_request(),
-    });
+    let request_payload = request.clone().into_request();
+    let route = request_payload.route().expect("operation route");
+    let request_frame = IntrospectionFrame::new(
+        route,
+        IntrospectionFrameBody::Request {
+            exchange: SystemEventFixture::exchange(),
+            request: request_payload,
+        },
+    );
     let decoded = IntrospectionFrame::decode_length_prefixed(
         &request_frame
             .encode_length_prefixed()
@@ -173,10 +179,13 @@ fn system_event_ingestion_and_reply_round_trip_as_typed_binary_frames() {
         count: 2,
         suppressed_count: 1,
     });
-    let reply_frame = IntrospectionFrame::new(IntrospectionFrameBody::Reply {
-        exchange: SystemEventFixture::exchange(),
-        reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply.clone()))),
-    });
+    let reply_frame = IntrospectionFrame::new(
+        route,
+        IntrospectionFrameBody::Reply {
+            exchange: SystemEventFixture::exchange(),
+            reply: Reply::committed(NonEmpty::single(SubReply::Ok(reply.clone()))),
+        },
+    );
     let decoded = IntrospectionFrame::decode_length_prefixed(
         &reply_frame.encode_length_prefixed().expect("encode reply"),
     )

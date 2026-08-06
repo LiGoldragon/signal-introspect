@@ -6,17 +6,17 @@
 //! `signal-router`, etc.). This crate must not become a bucket
 //! for every component's internal rows.
 
-use nota::{Block, NotaBlock, NotaDecode, NotaDecodeError, NotaEncode};
+use dotos::{Block, DotosBlock, DotosDecode, DotosDecodeError, DotosEncode};
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use signal_frame::signal_channel;
-pub use signal_message::MessageSlot as MessageIdentifier;
-use signal_persona::{ComponentName, EngineIdentifier, OwnerIdentity};
+use signal_frame::{ContractBinding, ContractId, WireContract, WireRevision, signal_channel};
+use signal_message::schema::lib::z2VLZR;
+use signal_persona::schema::lib::{z2VRBs, z2VRuG, z2VUT8};
 
 mod system_event;
 pub use system_event::*;
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct WirePath(String);
 
@@ -63,7 +63,7 @@ impl PartialEq<&str> for WirePath {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct SocketMode(u64);
 
@@ -113,8 +113,8 @@ impl PartialOrd<u64> for SocketMode {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -139,8 +139,8 @@ pub enum IntrospectionTarget {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -156,27 +156,27 @@ pub enum IntrospectionScope {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct EngineSnapshotQuery {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct ComponentSnapshotQuery {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
     pub target: IntrospectionTarget,
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct DeliveryTraceQuery {
-    pub engine: EngineIdentifier,
-    pub message_identifier: MessageIdentifier,
-    pub originator: ComponentName,
+    pub engine: z2VRuG,
+    pub message_identifier: z2VLZR,
+    pub originator: z2VUT8,
 }
 
 impl DeliveryTraceQuery {
@@ -190,14 +190,14 @@ impl DeliveryTraceQuery {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct PrototypeWitnessQuery {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct ObservedComponents(Vec<IntrospectionTarget>);
 
@@ -230,18 +230,15 @@ impl From<Vec<IntrospectionTarget>> for ObservedComponents {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct EngineSnapshot {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
     pub observed_components: ObservedComponents,
 }
 
 impl EngineSnapshot {
-    pub fn new(
-        engine: EngineIdentifier,
-        observed_components: impl Into<ObservedComponents>,
-    ) -> Self {
+    pub fn new(engine: z2VRuG, observed_components: impl Into<ObservedComponents>) -> Self {
         Self {
             engine,
             observed_components: observed_components.into(),
@@ -265,10 +262,10 @@ impl EngineSnapshot {
 /// `ComponentReadiness` itself stays closed per ESSENCE
 /// §"Perfect specificity at boundaries."
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct ComponentSnapshot {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
     pub target: IntrospectionTarget,
     pub readiness: Option<ComponentReadiness>,
 }
@@ -277,8 +274,8 @@ pub struct ComponentSnapshot {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -320,18 +317,18 @@ impl HopIndex {
     }
 }
 
-impl NotaDecode for HopIndex {
-    fn from_nota_block(block: &Block) -> Result<Self, NotaDecodeError> {
-        let value = NotaBlock::new(block).parse_integer()?;
-        let index = u32::try_from(value).map_err(|_| NotaDecodeError::InvalidInteger {
+impl DotosDecode for HopIndex {
+    fn from_dotos_block(block: &Block) -> Result<Self, DotosDecodeError> {
+        let value = DotosBlock::new(block).parse_integer()?;
+        let index = u32::try_from(value).map_err(|_| DotosDecodeError::InvalidInteger {
             value: value.to_string(),
         })?;
         Ok(Self(index))
     }
 }
 
-impl NotaEncode for HopIndex {
-    fn to_nota(&self) -> String {
+impl DotosEncode for HopIndex {
+    fn to_dotos(&self) -> String {
         self.0.to_string()
     }
 }
@@ -340,20 +337,16 @@ impl NotaEncode for HopIndex {
 /// share this value; `DeliveryTraceKey.hop_index` orders the events
 /// inside the joined chain.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct DeliveryTraceJoinKey {
-    pub engine: EngineIdentifier,
-    pub message_identifier: MessageIdentifier,
-    pub originator: ComponentName,
+    pub engine: z2VRuG,
+    pub message_identifier: z2VLZR,
+    pub originator: z2VUT8,
 }
 
 impl DeliveryTraceJoinKey {
-    pub fn new(
-        engine: EngineIdentifier,
-        message_identifier: MessageIdentifier,
-        originator: ComponentName,
-    ) -> Self {
+    pub fn new(engine: z2VRuG, message_identifier: z2VLZR, originator: z2VUT8) -> Self {
         Self {
             engine,
             message_identifier,
@@ -370,20 +363,20 @@ impl DeliveryTraceJoinKey {
 /// the join key; `hop_index` is the deterministic order key inside one
 /// delivery chain.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct DeliveryTraceKey {
-    pub engine: EngineIdentifier,
-    pub message_identifier: MessageIdentifier,
-    pub originator: ComponentName,
+    pub engine: z2VRuG,
+    pub message_identifier: z2VLZR,
+    pub originator: z2VUT8,
     pub hop_index: HopIndex,
 }
 
 impl DeliveryTraceKey {
     pub fn new(
-        engine: EngineIdentifier,
-        message_identifier: MessageIdentifier,
-        originator: ComponentName,
+        engine: z2VRuG,
+        message_identifier: z2VLZR,
+        originator: z2VUT8,
         hop_index: HopIndex,
     ) -> Self {
         Self {
@@ -417,20 +410,16 @@ impl DeliveryTraceKey {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct DeliveryTraceEvent {
     pub key: DeliveryTraceKey,
-    pub component: ComponentName,
+    pub component: z2VUT8,
     pub status: DeliveryTraceStatus,
 }
 
 impl DeliveryTraceEvent {
-    pub fn new(
-        key: DeliveryTraceKey,
-        component: ComponentName,
-        status: DeliveryTraceStatus,
-    ) -> Self {
+    pub fn new(key: DeliveryTraceKey, component: z2VUT8, status: DeliveryTraceStatus) -> Self {
         Self {
             key,
             component,
@@ -447,7 +436,7 @@ impl DeliveryTraceEvent {
 /// `events` vector means the introspect daemon has not yet seen any Tap
 /// event for the selected join key.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct DeliveryTraceEvents(Vec<DeliveryTraceEvent>);
 
@@ -480,20 +469,20 @@ impl From<Vec<DeliveryTraceEvent>> for DeliveryTraceEvents {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct DeliveryTrace {
-    pub engine: EngineIdentifier,
-    pub message_identifier: MessageIdentifier,
-    pub originator: ComponentName,
+    pub engine: z2VRuG,
+    pub message_identifier: z2VLZR,
+    pub originator: z2VUT8,
     pub events: DeliveryTraceEvents,
 }
 
 impl DeliveryTrace {
     pub fn new(
-        engine: EngineIdentifier,
-        message_identifier: MessageIdentifier,
-        originator: ComponentName,
+        engine: z2VRuG,
+        message_identifier: z2VLZR,
+        originator: z2VUT8,
         events: impl Into<DeliveryTraceEvents>,
     ) -> Self {
         Self {
@@ -517,8 +506,8 @@ impl DeliveryTrace {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -540,10 +529,10 @@ pub enum DeliveryTraceStatus {
 /// from that peer in this engine," distinguishable from observed states
 /// without polluting the closed inner enums.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct PrototypeWitness {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
     pub manager_seen: Option<ComponentReadiness>,
     pub router_seen: Option<ComponentReadiness>,
     pub terminal_seen: Option<ComponentReadiness>,
@@ -551,7 +540,7 @@ pub struct PrototypeWitness {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct IntrospectionUnimplemented {
     pub scope: IntrospectionScope,
@@ -562,8 +551,8 @@ pub struct IntrospectionUnimplemented {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -578,7 +567,7 @@ pub enum IntrospectionUnimplementedReason {
 }
 
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct IntrospectionDenied {
     pub scope: IntrospectionScope,
@@ -589,8 +578,8 @@ pub struct IntrospectionDenied {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -616,7 +605,7 @@ pub enum IntrospectionDeniedReason {
 /// `SignalAdmitted`, `NexusEntered`, `SemaWriteApplied`. Bare-eligible
 /// atom at its `String` position.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct TraceEventName(String);
 
@@ -663,8 +652,8 @@ impl PartialEq<&str> for TraceEventName {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -704,8 +693,8 @@ impl From<u64> for TraceSequence {
     Archive,
     RkyvSerialize,
     RkyvDeserialize,
-    NotaEncode,
-    NotaDecode,
+    DotosEncode,
+    DotosDecode,
     Debug,
     Clone,
     Copy,
@@ -725,10 +714,10 @@ pub enum TraceLayer {
 /// classification. Shared on the wire by the emitting component and the
 /// introspect daemon via [`triad_runtime::trace::TraceEventFrame`].
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct ComponentTraceEvent {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
     pub component: IntrospectionTarget,
     pub layer: TraceLayer,
     pub event_name: TraceEventName,
@@ -737,7 +726,7 @@ pub struct ComponentTraceEvent {
 
 impl ComponentTraceEvent {
     pub fn new(
-        engine: EngineIdentifier,
+        engine: z2VRuG,
         component: IntrospectionTarget,
         layer: TraceLayer,
         event_name: TraceEventName,
@@ -764,7 +753,7 @@ impl ComponentTraceEvent {
 
 impl std::fmt::Display for ComponentTraceEvent {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.to_nota().fmt(formatter)
+        self.to_dotos().fmt(formatter)
     }
 }
 
@@ -784,17 +773,17 @@ impl triad_runtime::trace::TraceEventFrame for ComponentTraceEvent {
 /// Filter request: by component kind, optionally narrowed to one event
 /// name. `event_name: None` returns every event for the component.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct ComponentTraceQuery {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
     pub component: IntrospectionTarget,
     pub event_name: Option<TraceEventName>,
 }
 
 impl ComponentTraceQuery {
     pub fn new(
-        engine: EngineIdentifier,
+        engine: z2VRuG,
         component: IntrospectionTarget,
         event_name: Option<TraceEventName>,
     ) -> Self {
@@ -810,7 +799,7 @@ impl ComponentTraceQuery {
 /// An empty `events` vector means the introspect daemon has not yet
 /// seen any pushed event for the selected component.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct ComponentTraceEvents(Vec<ComponentTraceEvent>);
 
@@ -845,17 +834,17 @@ impl From<Vec<ComponentTraceEvent>> for ComponentTraceEvents {
 /// Reply: sequence-ordered component-internal trace events for the
 /// selected component.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct ComponentTrace {
-    pub engine: EngineIdentifier,
+    pub engine: z2VRuG,
     pub component: IntrospectionTarget,
     pub events: ComponentTraceEvents,
 }
 
 impl ComponentTrace {
     pub fn new(
-        engine: EngineIdentifier,
+        engine: z2VRuG,
         component: IntrospectionTarget,
         events: impl Into<ComponentTraceEvents>,
     ) -> Self {
@@ -875,8 +864,23 @@ impl ComponentTrace {
     }
 }
 
+pub enum ContractMarker {}
+
+impl WireContract for ContractMarker {
+    const BINDING: ContractBinding = ContractBinding::new(
+        match ContractId::try_new(1) {
+            Ok(value) => value,
+            Err(_) => panic!("contract ID is allocated"),
+        },
+        match WireRevision::try_new(2) {
+            Ok(value) => value,
+            Err(_) => panic!("wire revision is allocated"),
+        },
+    );
+}
+
 signal_channel! {
-    channel Introspection {
+    channel Introspection contract ContractMarker {
         operation EngineSnapshot(EngineSnapshotQuery),
         operation ComponentSnapshot(ComponentSnapshotQuery),
         operation DeliveryTrace(DeliveryTraceQuery),
@@ -908,9 +912,9 @@ pub type IntrospectionRequestBuilder = RequestBuilder;
 // ─── Daemon configuration ──────────────────────────────────
 //
 // Typed startup configuration for `introspect-daemon`.
-// Human tooling may author this record through NOTA, but the live
+// Human tooling may author this record through Dotos, but the live
 // daemon consumes a signal-encoded rkyv archive path. The daemon does
-// not parse NOTA.
+// not parse Dotos.
 
 /// Startup configuration for `introspect-daemon`.
 ///
@@ -923,7 +927,7 @@ pub type IntrospectionRequestBuilder = RequestBuilder;
 /// `PERSONA_PEER_*` peer-socket enumeration environment-variable
 /// surface.
 #[derive(
-    Archive, RkyvSerialize, RkyvDeserialize, NotaEncode, NotaDecode, Debug, Clone, PartialEq, Eq,
+    Archive, RkyvSerialize, RkyvDeserialize, DotosEncode, DotosDecode, Debug, Clone, PartialEq, Eq,
 )]
 pub struct IntrospectDaemonConfiguration {
     /// Where the daemon binds its introspection-query Unix socket.
@@ -948,7 +952,7 @@ pub struct IntrospectDaemonConfiguration {
     /// convention).
     pub trace_socket_path: WirePath,
     /// The engine owner identity passed to the introspect daemon.
-    pub owner_identity: OwnerIdentity,
+    pub owner_identity: z2VRBs,
 }
 
 impl IntrospectDaemonConfiguration {

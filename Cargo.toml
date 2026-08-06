@@ -1,6 +1,6 @@
 [package]
 name         = "signal-introspect"
-version      = "0.2.0"
+version      = "0.3.0"
 edition      = "2024"
 rust-version = "1.89"
 license      = "MIT OR Apache-2.0"
@@ -13,15 +13,15 @@ name = "signal_introspect"
 path = "src/lib.rs"
 
 [features]
-default   = ["nota-text"]
-nota-text = ["signal-frame/nota-text"]
+default = ["dotos-text"]
+dotos-text = ["signal-frame/dotos-text"]
 
 [dependencies]
-nota = { package = "nota", git = "https://github.com/LiGoldragon/nota.git", branch = "main" }
-signal-frame             = { git = "https://github.com/LiGoldragon/signal-frame.git", branch = "main" }
-signal-persona           = { git = "https://github.com/LiGoldragon/signal-persona.git", branch = "main", features = ["nota-text"] }
-signal-message           = { git = "https://github.com/LiGoldragon/signal-message.git", branch = "main" }
-triad-runtime            = { git = "https://github.com/LiGoldragon/triad-runtime.git", branch = "main" }
+dotos                    = { package = "dotos", git = "https://github.com/LiGoldragon/dotos.git", rev = "80c7b17f7ad3cf547d2624c6a243e5de5f85c9f3" }
+signal-frame             = { git = "https://github.com/LiGoldragon/signal-frame.git", rev = "8aa0bcaeb29fe9e461a11706a469638d2fd109ac", default-features = false }
+signal-persona           = { git = "https://github.com/LiGoldragon/signal-persona.git", rev = "7d2568d420869aa0cded49c3c04cc0ac180e66a2", default-features = false, features = ["dotos-text"] }
+signal-message           = { git = "https://github.com/LiGoldragon/signal-message.git", rev = "1c7e2e0209cd0e27ce01c290e3318a20905e1142", default-features = false, features = ["dotos-text"] }
+triad-runtime            = { git = "https://github.com/LiGoldragon/triad-runtime.git", rev = "e44c07dbf31497af95eb461826bb9502115fbcfe" }
 rkyv                     = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 thiserror                = "2"
 
