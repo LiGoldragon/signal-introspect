@@ -1,0 +1,87 @@
+Signal
+[ signal_persona:[ EngineIdentifier ComponentName OwnerIdentity ] signal_message:[ MessageSlot ] ]
+[ EngineSnapshotObservation.EngineSnapshotObservationQuery ComponentSnapshotObservation.ComponentSnapshotObservationQuery DeliveryTraceObservation.DeliveryTraceObservationQuery PrototypeWitnessObservation.PrototypeWitnessObservationQuery ComponentTrace.ComponentTraceQuery RecordSystemEvent.RecordSystemEvent SystemEvents.SystemEventsQuery FlushSystemEvents.FlushSystemEvents ]
+[ EngineSnapshotObservation.EngineSnapshotObservation ComponentSnapshotObservation.ComponentSnapshotObservation DeliveryTraceObservation.DeliveryTraceObservation PrototypeWitnessObservation.PrototypeWitnessObservation ComponentTrace.ComponentTrace SystemEventAccepted.SystemEventAccepted SystemEvents.SystemEvents SystemEventsFlushed.SystemEventsFlushed Unimplemented.IntrospectionUnimplemented Denied.IntrospectionDenied ]
+[  IntrospectionTarget.[ EngineManager Mind Message Router Spirit System Harness Terminal Introspect Signal ]
+  IntrospectionScope.[ EngineSnapshot ComponentSnapshot DeliveryTrace PrototypeWitness ]
+  ObservedComponents.Vector<IntrospectionTarget>
+  EngineSnapshotObservation.{ EngineIdentifier ObservedComponents }
+  ComponentReadiness.[ Ready NotReady ]
+  OptionalComponentReadiness.Option<ComponentReadiness>
+  ComponentSnapshotObservation.{ EngineIdentifier IntrospectionTarget OptionalComponentReadiness }
+  TraceEventName.String
+  TraceSequence.Integer
+  TraceLayer.[ Signal Nexus Sema Authorization ]
+  ComponentTraceEvent.{ EngineIdentifier IntrospectionTarget TraceLayer TraceEventName TraceSequence }
+  OptionalTraceEventName.Option<TraceEventName>
+  ComponentTraceQuery.{ EngineIdentifier IntrospectionTarget OptionalTraceEventName }
+  ComponentTraceEvents.Vector<ComponentTraceEvent>
+  ComponentTrace.{ EngineIdentifier IntrospectionTarget ComponentTraceEvents }
+
+  HopIndex.Integer
+  DeliveryTraceObservationJoinKey.{ EngineIdentifier MessageSlot ComponentName }
+  DeliveryTraceObservationKey.{ EngineIdentifier MessageSlot ComponentName HopIndex }
+  DeliveryTraceObservationStatus.[ Accepted Routed Delivered Deferred Failed ]
+  DeliveryTraceObservationEvent.{ DeliveryTraceObservationKey ComponentName DeliveryTraceObservationStatus }
+  DeliveryTraceObservationEvents.Vector<DeliveryTraceObservationEvent>
+  DeliveryTraceObservationQuery.{ EngineIdentifier MessageSlot ComponentName }
+  DeliveryTraceObservation.{ EngineIdentifier MessageSlot ComponentName DeliveryTraceObservationEvents }
+  PrototypeWitnessObservationQuery.{ EngineIdentifier }
+  PrototypeWitnessObservation.{ EngineIdentifier OptionalComponentReadiness OptionalComponentReadiness OptionalComponentReadiness Option<DeliveryTraceObservationStatus> }
+  IntrospectionUnimplemented.{ IntrospectionScope UnimplementedReason }
+  UnimplementedReason.[ NotInPrototypeScope ComponentObservationMissing SubscriptionNotImplemented ]
+  IntrospectionDenied.{ IntrospectionScope DeniedReason }
+  DeniedReason.[ NotAuthorized Redacted ]
+  BootIdentifier.{ Integer Integer }
+  EventIdentifier.Integer
+  EventInstant.Integer
+  ExtractorRevision.Integer
+  PolicyRevision.Integer
+  BoundedPayload.{ String Boolean Integer }
+  EventSeverity.[ Debug Information Notice Warning Error Critical ]
+  ProvenanceTrust.[ TrustedJournalMetadata TrustedConnectionMetadata UntrustedApplicationMetadata ]
+  JournalSource.[ ExecutableBluetoothDaemon SystemdBluetoothService MessageIdentifierBluetooth ]
+  ApplicationSource.[ BluetoothDaemon ]
+  EventSource.[ Journal.JournalSource BusConnection Application.ApplicationSource ]
+  EventProvenance.{ EventSource ProvenanceTrust }
+  SystemEventDomain.[ Hardware ServiceControl ]
+  BluetoothTarget.[ Controller ]
+  BluetoothPowerEvent.[ RequestedOn RequestedOff ObservedOn ObservedOff ]
+  BluetoothPowerError.[ RequestRejected StateUnavailable ControllerUnavailable ]
+  TargetedUnclassifiedStatus.[ Counted Redacted ]
+  BluetoothPowerObservation.[ Event.BluetoothPowerEvent Error.BluetoothPowerError Unclassified.TargetedUnclassifiedStatus ]
+  BluetoothTopic.[ Power.BluetoothPowerObservation ]
+  BluetoothSystemEvent.{ BluetoothTarget BluetoothTopic }
+  SystemdTarget.[ BluetoothService IntrospectService ]
+  ServiceLifecycleEvent.[ Starting Started Stopping Stopped ]
+  ServiceLifecycleError.[ StartFailed StopFailed WatchdogExpired ]
+  ServiceLifecycleObservation.[ Event.ServiceLifecycleEvent Error.ServiceLifecycleError Unclassified.TargetedUnclassifiedStatus ]
+  SystemdTopic.[ Lifecycle.ServiceLifecycleObservation ]
+  SystemdSystemEvent.{ SystemdTarget SystemdTopic }
+  TargetedSystemEvent.[ Bluetooth.BluetoothSystemEvent Systemd.SystemdSystemEvent ]
+  SystemEvent.{ EventIdentifier BootIdentifier EventInstant TargetedSystemEvent EventSeverity EventProvenance ExtractorRevision PolicyRevision Option<BoundedPayload> }
+  CoalescingClosure.[ Active Interval ExplicitFlush Shutdown Eviction ]
+  CoalescedSystemEvent.{ SystemEvent Integer EventInstant EventInstant Integer PolicyRevision CoalescingClosure }
+  ExactCoalescingStatus.{ Integer Integer Integer }
+  RecordSystemEvent.{ SystemEvent }
+  SystemEventsQuery.{ BootIdentifier Option<SystemEventDomain> }
+  FlushSystemEvents.{ BootIdentifier }
+  SystemEventSummaries.Vector<CoalescedSystemEvent>
+  SystemEvents.{ BootIdentifier SystemEventSummaries ExactCoalescingStatus }
+  SystemEventAccepted.{ EventIdentifier Integer Integer }
+  SystemEventsFlushed.{ BootIdentifier SystemEventSummaries }
+  EngineSnapshotObservationQuery.{ EngineIdentifier }
+  ComponentSnapshotObservationQuery.{ EngineIdentifier IntrospectionTarget }
+  WirePath.String
+  SocketMode.Integer
+  IntrospectSocketPath.WirePath
+  IntrospectSocketMode.SocketMode
+  SupervisionSocketPath.WirePath
+  SupervisionSocketMode.SocketMode
+  StorePath.WirePath
+  ManagerSocketPath.WirePath
+  RouterSocketPath.WirePath
+  TerminalSocketPath.WirePath
+  TraceSocketPath.WirePath
+  IntrospectDaemonConfiguration.{ IntrospectSocketPath IntrospectSocketMode SupervisionSocketPath SupervisionSocketMode StorePath ManagerSocketPath RouterSocketPath TerminalSocketPath TraceSocketPath OwnerIdentity }
+]

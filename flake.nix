@@ -26,8 +26,9 @@
         # Include `examples/` so canonical Dotos examples files are present
         # at build time for `include_str!` in `tests/canonical_examples.rs`.
         examplesFilter = path: _type: builtins.match ".*/examples(/.*)?$" path != null;
+        ethosFilter = path: type: type == "regular" && pkgs.lib.hasSuffix ".ethos" path;
         sourceFilter = path: type:
-          (craneLib.filterCargoSources path type) || (examplesFilter path type);
+          (craneLib.filterCargoSources path type) || (examplesFilter path type) || (ethosFilter path type);
         src = pkgs.lib.cleanSourceWith {
           src = ./.;
           filter = sourceFilter;
@@ -41,15 +42,10 @@
         checks = {
           build = craneLib.cargoBuild (commonArgs // { inherit cargoArtifacts; });
           test = craneLib.cargoTest (commonArgs // { inherit cargoArtifacts; });
-          test-round-trip = craneLib.cargoTest (commonArgs // {
-            inherit cargoArtifacts;
-            cargoTestExtraArgs = "--test round_trip";
-          });
+          test-generated-contract = craneLib.cargoTest (commonArgs // { inherit cargoArtifacts; cargoTestExtraArgs = "--test generated_contract"; });
+          test-datom = craneLib.cargoTest (commonArgs // { inherit cargoArtifacts; cargoTestExtraArgs = "--features datom --test generated_contract"; });
           fmt = craneLib.cargoFmt { inherit src; };
-          clippy = craneLib.cargoClippy (commonArgs // {
-            inherit cargoArtifacts;
-            cargoClippyExtraArgs = "--all-targets -- -D warnings";
-          });
+          clippy = craneLib.cargoClippy (commonArgs // { inherit cargoArtifacts; cargoClippyExtraArgs = "--all-targets --all-features -- -D warnings"; });
         };
         devShells.default = pkgs.mkShell {
           name = "signal-introspect";
