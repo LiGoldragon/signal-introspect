@@ -34,8 +34,15 @@ impl Signalizable for Query {
         })
     }
 }
-
 impl Signalizable for Response {
+    fn signalize(&self) -> Result<Signal<Self>, rkyv::rancor::Error> {
+        Ok(Signal {
+            bytes: rkyv::to_bytes::<rkyv::rancor::Error>(self)?.to_vec(),
+            target: PhantomData,
+        })
+    }
+}
+impl Signalizable for ComponentTraceEvent {
     fn signalize(&self) -> Result<Signal<Self>, rkyv::rancor::Error> {
         Ok(Signal {
             bytes: rkyv::to_bytes::<rkyv::rancor::Error>(self)?.to_vec(),
@@ -64,9 +71,13 @@ impl Restorable<Query> for Signal<Query> {
         rkyv::from_bytes(self.bytes())
     }
 }
-
 impl Restorable<Response> for Signal<Response> {
     fn restore(&self) -> Result<Response, rkyv::rancor::Error> {
+        rkyv::from_bytes(self.bytes())
+    }
+}
+impl Restorable<ComponentTraceEvent> for Signal<ComponentTraceEvent> {
+    fn restore(&self) -> Result<ComponentTraceEvent, rkyv::rancor::Error> {
         rkyv::from_bytes(self.bytes())
     }
 }
