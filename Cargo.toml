@@ -1,6 +1,6 @@
 [package]
 name = "signal-introspect"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -12,13 +12,13 @@ build = "build.rs"
 default = []
 datom = ["dep:datom-codec", "dep:protos", "signal-persona/datom", "signal-message/datom"]
 [dependencies]
-datom-codec = { git = "https://github.com/LiGoldragon/datom-codec", rev = "18129314966c5043ee659de452b6f976fa319b21", optional = true }
-protos = { git = "https://github.com/LiGoldragon/protos", rev = "e8701521a37c698d6a2eb933618b9d5d1c6f6ffb", optional = true }
+datom-codec = { git = "https://github.com/LiGoldragon/datom-codec", rev = "627db67f2655efd9f786864009955005fd8ab2ad", optional = true }
+protos = { git = "https://github.com/LiGoldragon/protos", rev = "171b21f65337983ab624b7b906397a4f1f92c5a3", optional = true }
 rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
-signal-persona = { git = "https://github.com/LiGoldragon/signal-persona.git", rev = "07494bb262413310673f1e2745132884fcbe7cd3", default-features = false }
-signal-message = { git = "https://github.com/LiGoldragon/signal-message.git", rev = "f03a147cbc483fda6b433e7851cebdde726bc042", default-features = false }
+signal-persona = { git = "https://github.com/LiGoldragon/signal-persona.git", rev = "48118557368f26b7292f6b0fb2f98df5cec29fc5", default-features = false }
+signal-message = { git = "https://github.com/LiGoldragon/signal-message.git", rev = "2da9c6dde92dda11ba53aedaa75a3f3605b51454", default-features = false }
 [build-dependencies]
-ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "da58504926dabe4680bb7863d812846b0f845d86" }
+ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "de3d9928b156f2e1a92d060b7817af201abfdbef" }
 [lints.rust]
 unsafe_code = "forbid"
 unused = { level = "warn", priority = -1 }
