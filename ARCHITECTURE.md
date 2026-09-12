@@ -7,17 +7,23 @@
 `signal-introspect` is the ordinary peer-callable wire contract a
 client uses to ask the `introspect` daemon for an engine observation.
 It is the central wrapper-and-selector vocabulary: it defines
-`IntrospectionRequest`, `IntrospectionReply`, the targets
-and scopes a query may name, and the typed roll-up records that
-project peer-component observations to a human-facing surface. It asks
-and wraps; the component-specific observation row types stay in their
-own owning component contracts, so this crate never becomes a shared
-schema bucket. Runtime actors, the sema-engine store, peer-subscription
-fan-out, and projection logic live in `introspect`.
+`Query` and `Response`, the targets and scopes a query may name, and
+the typed roll-up records that project peer-component observations
+to a human-facing surface. It asks and wraps; the component-specific
+observation row types stay in their own owning component contracts,
+so this crate never becomes a shared schema bucket. Runtime actors,
+the sema-engine store, peer-subscription fan-out, and projection
+logic live in `introspect`.
 
-This crate depends on `signal-frame` for length-prefixed rkyv framing.
-It owns only wire vocabulary and codecs; it does not own daemon
-actors, store tables, sockets, or peer fan-out.
+The wire contract — every type, variant, and field name — is
+authored once in `ethos/signal.ethos` and generated into
+`src/generated/signal.rs` by `ethos-zero`. `build.rs` regenerates the
+contract from the `.ethos` source at build time and asserts the
+regenerated text matches what is checked in, so the checked-in file
+can never silently drift from its source.
+
+This crate owns only wire vocabulary and codecs; it does not own
+daemon actors, store tables, sockets, or peer fan-out.
 
 It is **not** a shared row bucket — component-specific observation
 records start in the component contract that owns the state
@@ -26,9 +32,10 @@ crate wraps; it does not redefine.
 
 Wire enums are closed. The "not yet observed" axis lives on
 `Option<>` wrappers or an empty vector on carrier records
-(`ComponentSnapshot`, `DeliveryTrace`, `PrototypeWitness`); the inner status enums
-(`ComponentReadiness`, `DeliveryTraceStatus`) stay closed and never
-carry an `Unknown` placeholder.
+(`ComponentSnapshotObservation`, `DeliveryTraceObservation`,
+`PrototypeWitnessObservation`); the inner status enums
+(`ComponentReadiness`, `DeliveryTraceObservationStatus`) stay closed
+and never carry an `Unknown` placeholder.
 
 ## 1 · Channel
 
@@ -37,46 +44,71 @@ carry an `Unknown` placeholder.
 | Request side | Introspection clients (CLIs, agent tooling). |
 | Reply side | `introspect` |
 
-Today's surface is one-shot observation queries. Streaming subscription
-support (`SubscribeComponent`) lands when `sema-engine` per-peer
-commit-then-emit gates allow it; until then this crate carries no
-subscription variants.
+Today's surface is one-shot observation queries plus the system-event
+recording and flush surface. Streaming subscription support lands
+when `sema-engine` per-peer commit-then-emit gates allow it; until
+then this crate carries no subscription variants.
 
 ## 2 · Owned surface
 
-- `IntrospectionRequest` / `IntrospectionReply` (closed enums).
+`Query` and `Response` are the two top-level closed enums; every
+other type below is a variant payload or a shared building block.
+
+- `Query` variants: `EngineSnapshotObservation`,
+  `ComponentSnapshotObservation`, `DeliveryTraceObservation`,
+  `PrototypeWitnessObservation`, `ComponentTrace`,
+  `RecordSystemEvent`, `SystemEvents`, `FlushSystemEvents`.
+- `Response` variants: `EngineSnapshotObservation`,
+  `ComponentSnapshotObservation`, `DeliveryTraceObservation`,
+  `PrototypeWitnessObservation`, `ComponentTrace`,
+  `SystemEventAccepted`, `SystemEvents`, `SystemEventsFlushed`,
+  `Unimplemented` (carrying `IntrospectionUnimplemented`), `Denied`
+  (carrying `IntrospectionDenied`).
 - `IntrospectionTarget` (closed enum of peer-component identities the
-  introspect daemon can ask).
-- `IntrospectionScope` (closed enum of observation shapes).
+  introspect daemon can ask: `EngineManager`, `Mind`, `Message`,
+  `Router`, `Spirit`, `System`, `Harness`, `Terminal`, `Introspect`,
+  `Signal`).
+- `IntrospectionScope` (closed enum of observation shapes:
+  `EngineSnapshot`, `ComponentSnapshot`, `DeliveryTrace`,
+  `PrototypeWitness`).
 - `ComponentReadiness` (closed enum: `Ready` / `NotReady`). The "not
   observed yet" axis lives on `Option<ComponentReadiness>` in carrier
   records.
-- `DeliveryTraceStatus` (closed enum mirroring
-  `signal_persona_router::RouterDeliveryStatus`:
-  `Accepted` / `Routed` / `Delivered` / `Deferred` / `Failed`). Carrier
-  records place it on hop-keyed `DeliveryTraceEvent` rows.
-- `DeliveryTraceKey` — four-field cross-component correlation key:
-  `engine`, `message_identifier`, `originator`, and `hop_index`. The
-  first three fields join one message-delivery chain; `hop_index`
-  orders events without clocks.
-- `DeliveryTraceJoinKey` — the first-three-field join portion of a
-  delivery trace key. Store implementations use it as the range-prefix
-  for all hop rows that belong to one delivery.
-- `IntrospectionUnimplementedReason` and `IntrospectionDeniedReason`
-  (closed positive rejection causes).
+- `DeliveryTraceObservationStatus` (closed enum: `Accepted` /
+  `Routed` / `Delivered` / `Deferred` / `Failed`). Carrier records
+  place it on hop-keyed `DeliveryTraceObservationEvent` rows.
+- `DeliveryTraceObservationKey` — four-field cross-component
+  correlation key: engine identifier, message slot, component name,
+  and hop index. The first three fields join one message-delivery
+  chain; hop index orders events without clocks.
+- `DeliveryTraceObservationJoinKey` — the first-three-field join
+  portion of a delivery trace key. Store implementations use it as
+  the range-prefix for all hop rows that belong to one delivery.
+- `IntrospectionUnimplemented` / `UnimplementedReason` and
+  `IntrospectionDenied` / `DeniedReason` (closed positive rejection
+  causes).
+- `ComponentTraceEvent` / `ComponentTraceQuery` / `ComponentTrace` —
+  per-component structured trace events keyed by engine, target, and
+  a closed `TraceLayer` (`Signal`, `Nexus`, `Sema`, `Authorization`).
 - Query records for engine snapshot, component snapshot, delivery
-  trace, and the prototype rollup `PrototypeWitness`.
+  trace, and the prototype rollup `PrototypeWitnessObservation`.
 - Reply records that wrap or summarize observations for projection.
-- Contract-local verbs declared in the `signal_channel!` invocation;
-  Sema classification (Layer 3) is daemon-side projection only.
-- Targeted system-event vocabulary: a recursive domain → target → topic →
-  curated event/error hierarchy; typed journal/application provenance and trust;
-  extractor and policy revisions; boot-local identity; and a 512-byte bounded
-  UTF-8 payload that retains truncation status and original byte length without
-  retaining a fallback body.
-- Exact-duplicate identity and summary records. Identity excludes timestamps and
-  representative identifiers; similarity, sampling, cooldown, token-bucket,
-  debounce, and recurring-pattern policy are deliberately not part of this type.
+- A targeted system-event vocabulary: a recursive domain → target →
+  topic → curated event/error hierarchy (`TargetedSystemEvent`
+  covering `Bluetooth` and `Systemd` targets today); typed
+  journal/application provenance and trust (`EventProvenance`,
+  `ProvenanceTrust`); extractor and policy revisions; boot-local
+  identity (`BootIdentifier`); and a bounded `BoundedPayload` that
+  retains a truncation-safe string/boolean/integer payload without a
+  free-form fallback body.
+- `RecordSystemEvent`, `SystemEventsQuery` / `SystemEvents`,
+  `FlushSystemEvents` / `SystemEventsFlushed`, and the
+  `CoalescedSystemEvent` / `ExactCoalescingStatus` shapes the daemon
+  uses to summarize and flush recorded events per boot.
+- `IntrospectDaemonConfiguration` — the typed socket-path and
+  socket-mode configuration record for the `introspect` daemon's
+  sockets and store path. A typed configuration shape, not daemon
+  code.
 
 Typed component targets and trace layers include Spirit authorization
 observations: a traced `spirit` daemon exposes the criome
@@ -99,19 +131,19 @@ ComponentReadiness
   | Ready
   | NotReady
 
-DeliveryTraceStatus
+DeliveryTraceObservationStatus
   | Accepted
   | Routed
   | Delivered
   | Deferred
   | Failed
 
-IntrospectionUnimplementedReason
+UnimplementedReason
   | NotInPrototypeScope
   | ComponentObservationMissing
   | SubscriptionNotImplemented
 
-IntrospectionDeniedReason
+DeniedReason
   | NotAuthorized
   | Redacted
 ```
@@ -120,31 +152,32 @@ Carrier records that need an observation-not-yet-arrived state wrap
 the inner enum as `Option<…>` or use an empty event vector:
 
 ```text
-ComponentSnapshot  | readiness:        Option<ComponentReadiness>
-DeliveryTrace      | events:           Vec<DeliveryTraceEvent>
-PrototypeWitness   | manager_seen:     Option<ComponentReadiness>
-PrototypeWitness   | router_seen:      Option<ComponentReadiness>
-PrototypeWitness   | terminal_seen:    Option<ComponentReadiness>
-PrototypeWitness   | delivery_status:  Option<DeliveryTraceStatus>
+ComponentSnapshotObservation | optional_component_readiness: Option<ComponentReadiness>
+DeliveryTraceObservation     | delivery_trace_observation_events: Vec<DeliveryTraceObservationEvent>
+PrototypeWitnessObservation  | three Option<ComponentReadiness> fields + Option<DeliveryTraceObservationStatus>
 ```
 
 `None` or `[]` means *"the daemon has not yet collected an
 observation from that peer or trace."* `Some(state)` or a
-`DeliveryTraceEvent` means *"this is the closed observation."* The
-distinction is structural; consumers pattern-match on the carrier
-shape, not on a sentinel inside a present value.
+`DeliveryTraceObservationEvent` means *"this is the closed
+observation."* The distinction is structural; consumers pattern-match
+on the carrier shape, not on a sentinel inside a present value.
 
 ## 4 · Sema-class projections (Layer 3)
 
 Each contract-local operation's daemon-side Component Command
-projects to a payloadless Sema class via `ToSemaOperation`. All
-current operations are read-shaped:
+projects to a payloadless Sema class. All current operations are
+read-shaped:
 
 ```text
-EngineSnapshot     -> Match
-ComponentSnapshot  -> Match
-DeliveryTrace      -> Match
-PrototypeWitness   -> Match
+EngineSnapshotObservation      -> Match
+ComponentSnapshotObservation   -> Match
+DeliveryTraceObservation       -> Match
+PrototypeWitnessObservation    -> Match
+ComponentTrace                 -> Match
+RecordSystemEvent              -> Assert
+SystemEvents                   -> Match
+FlushSystemEvents              -> Mutate
 Tap (mandatory observability)     -> Subscribe
 Untap (mandatory observability)   -> Retract
 ```
@@ -160,30 +193,31 @@ label is computed at observation publish time inside the daemon.
 
 | Constraint | Witness |
 |---|---|
-| The central contract asks and wraps; it does not define component rows. | Public type review: no router/terminal/manager row vocabulary defined here. Source-scan witness names "central contract does not define peer rows." |
-| Every request/reply travels as a Signal frame. | `tests/round_trip.rs` length-prefixed frame tests per variant. |
-| Every `IntrospectionRequest` variant is a contract-local verb in verb form. | The `signal_channel!` declaration names each verb; round-trip tests assert each variant's Dotos head. Sema classification is daemon-side projection only. |
-| Read-shaped payloads project to Sema `Match` / `Subscribe`; write-shaped payloads project to `Assert` / `Mutate` / `Retract`. | Daemon-side `ToSemaOperation` impl is the witness; today all read-shaped operations project to `Match`. |
-| Dotos derives live on the same typed records. | Cargo tests compile `dotos` `DotosEncode` and `DotosDecode` derives; canonical examples round-trip the text form. |
+| The central contract asks and wraps; it does not define component rows. | Public type review: no router/terminal/manager row vocabulary defined here. |
+| Every request/reply travels as a portable rkyv `Signal` frame. | `tests/generated_contract.rs` round-trips `Query`, `Response`, and `ComponentTraceEvent` through `Signalizable` / `Restorable`. |
+| The checked-in generated contract never drifts from its `.ethos` source. | `build.rs` regenerates `src/generated/signal.rs` from `ethos/signal.ethos` on every build and asserts byte-for-byte equality with what is checked in. |
+| Datom derives live on the same typed records, behind the `datom` feature. | `tests/generated_contract.rs::datom_round_trip_preserves_trace_query` (feature-gated) compiles the `datom_codec::Datomizable` / `Compositional` derives and round-trips canonical datom text. |
 | The contract contains no daemon code. | Source scan: no Kameo, Tokio, socket, or storage code. |
-| Wire enums contain no `Unknown` variant. | `tests/round_trip.rs::introspection_status_enums_are_closed_no_unknown_variants` exhaustively matches every `ComponentReadiness` and `DeliveryTraceStatus` variant. Adding an `Unknown` variant breaks the match. |
+| Wire enums contain no `Unknown` variant. | Source review of `ethos/signal.ethos`: `ComponentReadiness` and `DeliveryTraceObservationStatus` are exhaustive, closed enums with no polling-shape variant. |
 | Any record name containing the word `Unknown` represents a positive "entity not in our state" rejection, not a polling-shape escape hatch. | This crate has no `Unknown*` record names today; the "not observed yet" axis lives on `Option<>` wrappers on the carrier records. |
-| The "not yet observed" axis lives on `Option<>` wrappers, never inside a closed status enum. | `prototype_witness_reply_round_trips_with_no_observations_yet` exercises the all-`None` carrier shape end-to-end through the length-prefixed frame. |
-| Delivery trace correlation uses the four-field key `(engine, message_identifier, originator, hop_index)`. | `tests/round_trip.rs::delivery_trace_key_round_trips_with_four_correlation_fields` proves the key rides the contract reply. |
-| Each variant's Dotos head matches the contract-local verb declared in `signal_channel!`. | The macro generates the codec; round-trip tests assert each variant's Dotos head. |
-| Round-trip witnesses cover every variant in rkyv. | `tests/round_trip.rs` exercises every request and reply variant through `Frame::encode_length_prefixed` / `decode_length_prefixed`. |
-| Round-trip witnesses cover every variant in Dotos. | `examples/canonical.dotos` holds one canonical text example per request/reply variant; round-trip tests parse and re-emit each. |
+| The "not yet observed" axis lives on `Option<>` wrappers, never inside a closed status enum. | `PrototypeWitnessObservation` carries three `Option<ComponentReadiness>` fields and an `Option<DeliveryTraceObservationStatus>` rather than an `Unknown` enum variant. |
+| Delivery trace correlation uses the four-field key `(engine, message slot, component, hop index)`. | `DeliveryTraceObservationKey` in `ethos/signal.ethos` names the four fields; `DeliveryTraceObservationJoinKey` names the three-field join prefix. |
+| Round trips cover every variant carried through rkyv. | `tests/generated_contract.rs` exercises `Query`/`Response`/`ComponentTraceEvent` through `Signal::from` / `restore`, including a malformed-bytes rejection case. |
 | No stringly-typed dispatch (`match s.as_str()`) for closed-set states. | All status/scope/reason fields are typed closed enums. |
 | Request payloads carry query target and scope only; they mint no sequence numbers, snapshot timestamps, or correlation identity. | Public type review: request `*Query` records carry no daemon-minted fields; `introspect` supplies those at observation time. |
 | Git dependencies resolve to immutable producer identities. | Every Git dependency in `Cargo.toml` declares an exact `rev`; no dependency follows a moving branch. |
 
-## 6 · Dotos codec shape on `signal_channel!` operation heads
+## 6 · Datom codec shape
 
-The `signal_channel!` macro emits a request variant's Dotos head as
-the operation head. For example,
-`IntrospectionRequest::PrototypeWitness(PrototypeWitnessQuery { .. })`
-encodes as `(PrototypeWitness {...})`. Canonical examples and
-round-trip tests carry the operation heads.
+Under the `datom` feature, `datom_codec::Datomizable` and
+`datom_codec::Compositional` derive on the same generated records
+that carry the rkyv wire form. A `Query::ComponentTrace(...)` value
+renders to canonical datom text as a struct-shaped positional record
+whose head names the variant, for example
+`ComponentTrace{ engine ... }`. The `datom` feature also pulls in the
+same feature on `signal-persona` and `signal-message`, since this
+contract composes their types (`EngineIdentifier`, `ComponentName`,
+`OwnerIdentity`, `MessageSlot`).
 
 ## 7 · Data boundary
 
@@ -195,9 +229,7 @@ payload.
 
 ## 8 · Status
 
-The crate is the central envelope vocabulary today. The
-`ComponentObservations` and `ListRecordKinds` envelope extensions
-land alongside their owning component contracts. `SubscribeComponent`
+The crate is the central envelope vocabulary today. `SubscribeComponent`
 lands once `sema-engine` per-peer commit-then-emit semantics are
 declared; until then this crate has no subscription variants and no
 `Unimplemented`-stub variant that would force consumers to write
@@ -222,22 +254,20 @@ wire surface".
 ## 10 · Code map
 
 ```text
+ethos/
+└── signal.ethos          — the authored wire contract (types, variants, Query/Response)
 src/
-├── lib.rs                — payloads + signal_channel! invocation
-└── system_event.rs       — typed system-event vocabulary and Dotos boundary
-examples/
-└── canonical.dotos       — one canonical example per request/reply variant
+├── lib.rs                — Signal<T> / Signalizable / Restorable / ByteViewable, ETHOS constant
+└── generated/
+    └── signal.rs          — generated from ethos/signal.ethos by ethos-zero (build.rs asserts freshness)
 tests/
-└── round_trip.rs          — per-variant frame round trips + Dotos witnesses
-                             + closed-enum + operation-head witnesses
-                             + canonical examples parser
+└── generated_contract.rs  — rkyv round trips per variant + feature-gated datom round trip
 ```
 
 ## See also
 
-- `signal-frame/macros/src/validate.rs` — the macro.
 - `~/primary/skills/component-triad.md` §"Verbs come in three layers".
 - `signal-router/ARCHITECTURE.md` — router observation rows
-  this crate wraps as `DeliveryTraceEvent` carriers.
+  this crate wraps as `DeliveryTraceObservationEvent` carriers.
 - `signal-terminal/ARCHITECTURE.md` — terminal observation
-  rows this crate wraps via `ComponentObservationResult`.
+  rows this crate wraps via `ComponentSnapshotObservation`.

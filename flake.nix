@@ -23,12 +23,12 @@
           "rust-src"
         ];
         craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
-        # Include `examples/` so canonical Dotos examples files are present
-        # at build time for `include_str!` in `tests/canonical_examples.rs`.
-        examplesFilter = path: _type: builtins.match ".*/examples(/.*)?$" path != null;
+        # Include `ethos/*.ethos` so the authored wire contract is present
+        # at build time for `include_str!` in `src/lib.rs` and for build.rs's
+        # regeneration freshness check.
         ethosFilter = path: type: type == "regular" && pkgs.lib.hasSuffix ".ethos" path;
         sourceFilter = path: type:
-          (craneLib.filterCargoSources path type) || (examplesFilter path type) || (ethosFilter path type);
+          (craneLib.filterCargoSources path type) || (ethosFilter path type);
         src = pkgs.lib.cleanSourceWith {
           src = ./.;
           filter = sourceFilter;
