@@ -1,6 +1,6 @@
 [package]
 name = "signal-introspect"
-version = "1.1.0"
+version = "2.0.0"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -16,7 +16,7 @@ datom-codec = { git = "https://github.com/LiGoldragon/datom-codec", rev = "18129
 protos = { git = "https://github.com/LiGoldragon/protos", rev = "e8701521a37c698d6a2eb933618b9d5d1c6f6ffb", optional = true }
 rkyv = { version = "0.8", default-features = false, features = ["std", "bytecheck", "little_endian", "pointer_width_32", "unaligned"] }
 signal-persona = { git = "https://github.com/LiGoldragon/signal-persona.git", rev = "740eb20f4850e26daeb48911a230b4aa4993f954", default-features = false }
-signal-message = { git = "https://github.com/LiGoldragon/signal-message.git", rev = "178a5ef75584982bfd971aeb600310b530791e25", default-features = false }
+signal-message = { git = "https://github.com/LiGoldragon/signal-message.git", rev = "f03a147cbc483fda6b433e7851cebdde726bc042", default-features = false }
 [build-dependencies]
 ethos-zero = { git = "https://github.com/LiGoldragon/ethos-zero", rev = "da58504926dabe4680bb7863d812846b0f845d86" }
 [lints.rust]

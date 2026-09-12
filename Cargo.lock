@@ -312,7 +312,7 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "signal-introspect"
-version = "1.1.0"
+version = "2.0.0"
 dependencies = [
  "datom-codec 0.26.1",
  "ethos-zero 8.0.0",
@@ -324,12 +324,12 @@ dependencies = [
 
 [[package]]
 name = "signal-message"
-version = "1.0.0"
-source = "git+https://github.com/LiGoldragon/signal-message.git?rev=178a5ef75584982bfd971aeb600310b530791e25#178a5ef75584982bfd971aeb600310b530791e25"
+version = "2.0.0"
+source = "git+https://github.com/LiGoldragon/signal-message.git?rev=f03a147cbc483fda6b433e7851cebdde726bc042#f03a147cbc483fda6b433e7851cebdde726bc042"
 dependencies = [
- "datom-codec 0.25.6",
- "ethos-zero 6.1.6",
- "protos 0.29.1",
+ "datom-codec 0.26.1",
+ "ethos-zero 8.0.0",
+ "protos 0.30.0",
  "rkyv",
 ]
 
