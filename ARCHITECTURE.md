@@ -12,7 +12,7 @@ the typed roll-up records that project peer-component observations
 to a human-facing surface. It asks and wraps; the component-specific
 observation row types stay in their own owning component contracts,
 so this crate never becomes a shared schema bucket. Runtime actors,
-the sema-engine store, peer-subscription fan-out, and projection
+the memory-engine store, peer-subscription fan-out, and projection
 logic live in `introspect`.
 
 The wire contract — every type, variant, and field name — is
@@ -46,7 +46,7 @@ and never carry an `Unknown` placeholder.
 
 Today's surface is one-shot observation queries plus the system-event
 recording and flush surface. Streaming subscription support lands
-when `sema-engine` per-peer commit-then-emit gates allow it; until
+when `memory-engine` per-peer commit-then-emit gates allow it; until
 then this crate carries no subscription variants.
 
 ## 2 · Owned surface
@@ -89,7 +89,7 @@ other type below is a variant payload or a shared building block.
   causes).
 - `ComponentTraceEvent` / `ComponentTraceQuery` / `ComponentTrace` —
   per-component structured trace events keyed by engine, target, and
-  a closed `TraceLayer` (`Signal`, `Nexus`, `Sema`, `Authorization`).
+  a closed `TraceLayer` (`Signal`, `Nexus`, `Memory`, `Authorization`).
 - Query records for engine snapshot, component snapshot, delivery
   trace, and the prototype rollup `PrototypeWitnessObservation`.
 - Reply records that wrap or summarize observations for projection.
@@ -230,7 +230,7 @@ payload.
 ## 8 · Status
 
 The crate is the central envelope vocabulary today. `SubscribeComponent`
-lands once `sema-engine` per-peer commit-then-emit semantics are
+lands once `memory-engine` per-peer commit-then-emit semantics are
 declared; until then this crate has no subscription variants and no
 `Unimplemented`-stub variant that would force consumers to write
 shadow code for a missing feature.

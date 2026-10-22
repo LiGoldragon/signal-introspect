@@ -137,7 +137,7 @@ is ordered by `DeliveryTraceObservationKey`'s hop index.
 
 ### Adding a SubscribeComponent variant
 
-Wait until `sema-engine` per-peer commit-then-emit gates land
+Wait until `memory-engine` per-peer commit-then-emit gates land
 (Slice 3 territory). When it does:
 
 1. Read `~/primary/skills/subscription-lifecycle.md` end-to-end.

@@ -52,19 +52,27 @@ fn datom_round_trip_preserves_trace_query() {
 
 #[test]
 fn component_trace_event_restores_from_fresh_peer_bytes() {
-    let event = signal_introspect::ComponentTraceEvent {
-        engine_identifier: "engine".into(),
-        introspection_target: IntrospectionTarget::Spirit,
-        trace_layer: signal_introspect::TraceLayer::Nexus,
-        trace_event_name: "started".into(),
-        trace_sequence: 91,
-    };
-    let sent = event.signalize().expect("archive event");
-    let received = Signal::<signal_introspect::ComponentTraceEvent>::from(sent.bytes().to_vec());
-    assert_eq!(received.restore().expect("restore event"), event);
-    assert!(
-        Signal::<signal_introspect::ComponentTraceEvent>::from(vec![255, 0, 1])
-            .restore()
-            .is_err()
-    );
+    for trace_layer in [
+        signal_introspect::TraceLayer::Signal,
+        signal_introspect::TraceLayer::Nexus,
+        signal_introspect::TraceLayer::Memory,
+        signal_introspect::TraceLayer::Authorization,
+    ] {
+        let event = signal_introspect::ComponentTraceEvent {
+            engine_identifier: "engine".into(),
+            introspection_target: IntrospectionTarget::Spirit,
+            trace_layer,
+            trace_event_name: "started".into(),
+            trace_sequence: 91,
+        };
+        let sent = event.signalize().expect("archive event");
+        let received =
+            Signal::<signal_introspect::ComponentTraceEvent>::from(sent.bytes().to_vec());
+        assert_eq!(received.restore().expect("restore event"), event);
+        assert!(
+            Signal::<signal_introspect::ComponentTraceEvent>::from(vec![255, 0, 1])
+                .restore()
+                .is_err()
+        );
+    }
 }

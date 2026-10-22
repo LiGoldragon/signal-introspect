@@ -11,7 +11,7 @@ Signal
   ComponentSnapshotObservation.{ EngineIdentifier IntrospectionTarget OptionalComponentReadiness }
   TraceEventName.String
   TraceSequence.Integer
-  TraceLayer.[ Signal Nexus Sema Authorization ]
+  TraceLayer.[ Signal Nexus Memory Authorization ]
   ComponentTraceEvent.{ EngineIdentifier IntrospectionTarget TraceLayer TraceEventName TraceSequence }
   OptionalTraceEventName.Option<TraceEventName>
   ComponentTraceQuery.{ EngineIdentifier IntrospectionTarget OptionalTraceEventName }

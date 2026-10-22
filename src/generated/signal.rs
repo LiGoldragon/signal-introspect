@@ -59,7 +59,7 @@ pub type TraceSequence = i64;
 pub enum TraceLayer {
     Signal,
     Nexus,
-    Sema,
+    Memory,
     Authorization,
 }
 #[rustfmt::skip]
