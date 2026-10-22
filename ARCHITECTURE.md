@@ -163,10 +163,10 @@ observation from that peer or trace."* `Some(state)` or a
 observation."* The distinction is structural; consumers pattern-match
 on the carrier shape, not on a sentinel inside a present value.
 
-## 4 · Sema-class projections (Layer 3)
+## 4 · Memory-class projections (Layer 3)
 
 Each contract-local operation's daemon-side Component Command
-projects to a payloadless Sema class. All current operations are
+projects to a payloadless Memory class. All current operations are
 read-shaped:
 
 ```text
@@ -186,7 +186,7 @@ When per-peer commit-then-emit streaming lands, the additional
 operation maps to `Subscribe` and opens a typed event stream with a
 request-side retraction variant and a reply-side acknowledgement.
 
-The wire form carries the contract-local verb only; the Sema class
+The wire form carries the contract-local verb only; the Memory class
 label is computed at observation publish time inside the daemon.
 
 ## 5 · Constraints
